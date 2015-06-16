@@ -1,0 +1,31 @@
+doctype html
+<!--[if lt IE 9]>
+<html lang="ja" class="lt-ie9">
+<![endif]-->
+<!--[if gt IE 8]><!-->
+<html lang="ja">
+<!--<![endif]-->
+block head
+head
+  meta(charset='UTF-8')
+  meta(name='viewport', content='width=device-width, initial-scale=1')
+  title component ${name}
+  //export
+  link(rel='stylesheet', href='./reset.css', exclude)
+  link(rel='stylesheet', href='../../html-components/bin/html-components.css', exclude)
+  link(rel='stylesheet', href='./${name}.css')
+  ///export
+body
+  //export
+  .${name}
+    - var assets = 'component-assets'
+    div
+      // contents
+      | ${yield}
+
+  script(src='../../../build/js/_bundle.js', exclude)
+  script(src='../../html-components/bin/html-components.js', exclude)
+  script(src='./${name}.js')
+  script(src='./test.js', exclude)
+  ///export
+| </html>
