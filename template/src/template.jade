@@ -19,8 +19,8 @@ body
   //export
   .${name}
     - var assets = 'component-assets'
-    div
-      // contents
+    .content
+      // content
       | ${yield}
 
   script(src='../../../build/js/_bundle.js', exclude)
