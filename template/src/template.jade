@@ -5,7 +5,7 @@ html(lang="ja")
     meta(name='viewport', content='width=device-width, initial-scale=1')
     title component ${name}
     //export
-    link(rel='stylesheet', href='../../html-components/bin/html-components.css', exclude)
+    link(rel='stylesheet', href='../../html-component/bin/html-component.css', exclude)
     link(rel='stylesheet', href='./${name}.css')
     ///export
   body
@@ -17,8 +17,8 @@ html(lang="ja")
         | ${yield}
 
     script(src='../../../build/js/_bundle.js', exclude)
-    script(src='../../html-components/bin/html-components.js', exclude)
-    script(src='../../html-components/bin/html-components-debug.js', exclude)
+    script(src='../../html-component/bin/html-component.js', exclude)
+    script(src='../../html-component/bin/html-component-debug.js', exclude)
     script(src='./${name}.js')
     script(src='./test.js', exclude)
     ///export

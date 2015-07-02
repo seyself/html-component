@@ -12,7 +12,7 @@ class window.${className}
 
   # --------------------------------------------------- constructor
   constructor: ()->
-    HtmlComponents.register(this)
+    HtmlComponent.register(this)
     _$element = $('.${name}')
 
 
@@ -29,6 +29,6 @@ class window.${className}
   toString: ()=>
     return ${className}.className
 
-HtmlComponents.ready ()=>
+HtmlComponent.ready ()=>
   new ${className}()
 
