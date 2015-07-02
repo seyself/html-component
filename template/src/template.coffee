@@ -4,10 +4,10 @@ class window.${className}
   @version = '1.0.0'
 
   # --------------------------------------------------- event types
-  @SHOW = '${name}.show'
-  @HIDE = '${name}.hide'
+  #@SHOW = '${name}.show'
+  #@HIDE = '${name}.hide'
 
-  # --------------------------------------------------- private fields
+  # --------------------------------------------------- members
   _$element = null
 
   # --------------------------------------------------- constructor
@@ -16,20 +16,19 @@ class window.${className}
     _$element = $('.${name}')
 
 
-  # --------------------------------------------------- public methods
-  show: ()=>
+  # --------------------------------------------------- methods
+  _init = ()=>
     # do something...
 
-  hide: ()=>
-    # do something...
+  #show: ()=>
+  #   do something...
+
+  #hide: ()=>
+  #   do something...
 
   toString: ()=>
     return ${className}.className
 
-  # --------------------------------------------------- private methods
-  _init = ()=>
-    # do something...
-
-$ ()=>
+HtmlComponents.ready ()=>
   new ${className}()
 

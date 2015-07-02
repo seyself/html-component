@@ -1,4 +1,4 @@
-$ ()=>
+HtmlComponents.ready ()=>
   $showButton = $('<button>SHOW</button>')
   $hideButton = $('<button>HIDE</button>')
   style =
