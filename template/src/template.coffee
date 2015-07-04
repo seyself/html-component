@@ -15,7 +15,6 @@ class window.${className}
     HtmlComponent.register(this)
     _$element = $('.${name}')
 
-
   # --------------------------------------------------- methods
   _init = ()=>
     # do something...

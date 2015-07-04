@@ -1,4 +1,4 @@
-HtmlComponents.ready ()=>
+HtmlComponent.ready ()=>
   $showButton = $('<button>SHOW</button>')
   $hideButton = $('<button>HIDE</button>')
   style =
@@ -11,10 +11,10 @@ HtmlComponents.ready ()=>
   $hideButton.css style
 
   $showButton.on 'click', ()=>
-    HtmlComponents.get('${className}')[0].show()
+    HtmlComponent.get('${className}')[0].show()
 
   $hideButton.on 'click', ()=>
-    HtmlComponents.get('${className}')[0].hide()
+    HtmlComponent.get('${className}')[0].hide()
 
   $body = $(document.body)
   $body.append $showButton

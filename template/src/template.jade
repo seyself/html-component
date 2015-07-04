@@ -12,9 +12,9 @@ html(lang="ja")
     //export
     .${name}
       - var assets = 'component-assets'
-      .content
-        // content
-        | ${yield}
+      .grid
+        .grid-cell
+          | ${yield}
 
     script(src='../../../build/js/_bundle.js', exclude)
     script(src='../../html-component/bin/html-component.js', exclude)

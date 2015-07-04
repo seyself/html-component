@@ -1,10 +1,51 @@
 @import 'compass'
 
-.${name}
+// variables ======================================
+
+$assets: 'component-assets'
+
+$grid-out: 0px
+$grid-in: 0px
+$grid-background: none
+$grid-background-size: cover //auto, cover, contain
+
+$cell-out: 0px
+$cell-in: 0px
+$cell-background: none
+$cell-background-size: auto //auto, cover, contain
+
+// mixins ======================================
+
+@mixin grid()
+  display: table
+  table-layout: fixed
+  border-collapse: separate
+  border-spacing: $cell-out
+  width: 100%
+  padding: $grid-in
+  background: $grid-background
+  background-size: $grid-background-size
+
+@mixin grid-cell()
   position: relative
+  display: table-cell
+  padding: $cell-in
+  background: $cell-background
+  background-size: $cell-background-size
+
+// layout ======================================
+
+.${name} *
+  +box-sizing(border-box)
+
+.${name}
   display: block
   +box-sizing(border-box)
   width: 100%
+  padding: $grid-out
 
-  & > .content
-    position: relative
+  & > .grid
+    +grid()
+
+    & > .grid-cell
+      +grid-cell()
