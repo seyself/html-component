@@ -9,6 +9,7 @@ _cheerio = require('cheerio')
 class jsx.LayoutPreviewGenerator
   
   _data = null
+  _params = null
   _components = null
   _assets = 'test_layout-assets/'
   _componentExportable = true
@@ -22,11 +23,16 @@ class jsx.LayoutPreviewGenerator
     _data = data
     return
     
-  generate: ()->
+  generate: (params)->
+    _params = params
+#    _assets = _params.assetsPath
     $ = _cheerio.load('<div><div id="main"></div></div>')
     $body = $('div')
     $main = $('div#main')
     doc = _data.document
+    if !dest
+      dest = './build'
+
     _components = []
     _ref_elements = {}
 
@@ -38,14 +44,47 @@ class jsx.LayoutPreviewGenerator
     body = $body.html()
     body = '<div id="container">' + body + '</div>'
     if _componentExportable
-      body += '<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>'
-      body += '<script src="html-component-debug.js"></script>'
+      body += '<script src="../components/libs/bundle.js" exclude></script>'
+      body += '<script src="../components/html-component/dist/env.js" exclude></script>'
+      body += '<script src="../components/html-component/dist/html-component.js" exclude></script>'
+      body += '<script src="../components/html-component/dist/html-component-debug.js" exclude></script>'
     html = _createHTML(doc.title, style, body)
     html = beautify.html(html)
-    fs.writeFile('./preview.html', html, null, null)
+    htmlFile = dest + '/' + _data.document.filename + '.html'
 
-    if _componentExportable
-      _createComponents()
+    exec 'mkdir -p ' + dest, ()->
+      fs.writeFile(htmlFile, html, null, null)
+      _copyHTMLAssets html, ()->
+        if _componentExportable
+          _createComponents()
+
+  _copyHTMLAssets = (html, callback)->
+    pathes = []
+    matches = html.match(/"[^"]+\.(png|jpg|gif|json|svg|swf|mp3|mp4|mov|wav|ogg|webm)"/gm)
+    matches.forEach (code)->
+      code = code.replace(/"/g, '')
+      src = path.dirname(code)
+      if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+        # not replace
+        # console.log code
+      else if pathes.indexOf(src) < 0
+        pathes.push(src)
+
+    copyList = []
+    for src in pathes
+      src_diff_1 = path.join(_params.cwd, src.replace(_params.assets_src_path, _params.assets_dest))
+      src_diff_2 = path.join(_params.cwd, _params.assets_dest)
+      srcDir = path.join(_params.assets_src, src_diff_1.replace(src_diff_2, ''))
+      dstDir = path.dirname(src_diff_1)
+      copyList.push {
+        mkdir: dstDir
+        cpSrc: srcDir
+        cpDst: dstDir
+      }
+
+    _copyComponentAssets(null, {assets:copyList}, callback)
+
+
 
   _createComponents = ()->
     data = _components.shift()
@@ -67,7 +106,7 @@ class jsx.LayoutPreviewGenerator
       base: 'components/' + data.name + '/dist/'
       assets: []
     dstBase = result.base
-    matches = html.match(/"[^"]+\.(png|jpg|gif|json|txt|xml|js|css|mp3|mp4|mov|wav|ogg|webm)"/gm)
+    matches = html.match(/"[^"]+\.(png|jpg|gif|json|svg|swf|mp3|mp4|mov|wav|ogg|webm)"/gm)
     matches.forEach (code)->
       code = code.replace(/"/g, '')
       src = path.dirname(code)
@@ -78,14 +117,14 @@ class jsx.LayoutPreviewGenerator
         pathes.push(src)
 
     for src in pathes
-      asset = path.join('component-assets', src.replace(_assets, ''))
-      assetDir = path.join(dstBase, 'component-assets')
+      asset = path.join('component-assets', src.replace(_params.assets_src_path, ''))
+      srcDir = path.join(_params.assets_src, src.replace(_params.assets_src_path, ''))
       dst = path.join(dstBase, asset)
-      dstDir = path.dirname(dst)
+      dstDir = path.join(_params.cwd, path.dirname(dst))
       result.html = result.html.split(src).join(asset)
       result.assets.push {
         mkdir: dst
-        cpSrc: src
+        cpSrc: srcDir
         cpDst: dstDir
       }
     return result
@@ -123,16 +162,21 @@ class jsx.LayoutPreviewGenerator
     code += '<meta charset="utf-8">'
     code += '<title>' + title + '</title>'
     if exportComment
+      code += '<link rel="stylesheet" href="../html-component/dist/html-component.css" exclude>'
       code += '<style exclude>' + _getStylePSE() + '</style>'
       code += '<!--export--><style>' + css + '</style><!--/export--></head>'
       code += '<body><!--export-->' + body + '<!--/export-->'
-      code += '<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js" exclude></script>'
-      code += '<script src="./html-component-debug.js" exclude></script>'
+      code += '<script src="../libs/bundle.js" exclude></script>'
+      code += '<script src="../html-component/dist/env.js" exclude></script>'
+      code += '<script src="../html-component/dist/html-component.js" exclude></script>'
+      code += '<script src="../html-component/dist/html-component-debug.js" exclude></script>'
       code += '</body></html>'
     else
+      code += '<link rel="stylesheet" href="../components/html-component/dist/html-component.css" exclude>'
       code += _getMetaData()
       code += '<style>' + css + '</style><!--include components-css--></head>'
-      code += '<body>' + body + '<!--include components-js--></body></html>'
+      code += '<body>' + body
+      code += '<!--include components-js--></body></html>'
     return code
 
   _getMetaData = ()->
@@ -181,7 +225,7 @@ class jsx.LayoutPreviewGenerator
     if meta.type == 'text'
       tag = _getText(meta.text.text)
     else if meta.type == 'image'
-      tag = '<img src="' + _assets + meta.image.url + '" alt="' + meta.image.text.join(' ') + '">'
+      tag = '<img src="' + path.join(_params.assets_src_path, meta.image.url) + '" alt="' + meta.image.text.join(' ') + '">'
     
     if option?.link_url
       tag = '<a href="' + option.link_url + '" target="' + option.link_target + '">' + tag + '</a>'

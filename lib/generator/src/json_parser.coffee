@@ -150,6 +150,8 @@ class jsx.LayoutJSONParser
     
     data.document = 
       title: root.doc_title
+      filename: root.name.split('.').shift()
+      psd: root.name
       horizontal: root.horizontal
       vertical: root.vertical
       device: root.doc_type

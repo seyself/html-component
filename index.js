@@ -83,9 +83,9 @@ HtmlComponent.prototype.rename = function(currentName, replaceName, callback){
 };
 
 /** コンポーネントを使ったHTMLを書き出す */
-HtmlComponent.prototype.gulp_build = request('./lib/gulp-build.js');
+HtmlComponent.prototype.gulp_build = require('./lib/gulp-build.js');
 
-HtmlComponent.prototype.generate = request('./lib/generate.js');
+HtmlComponent.prototype.generate = require('./lib/generate.js');
 
 module.exports = new HtmlComponent();
 
