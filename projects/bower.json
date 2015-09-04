@@ -1,0 +1,25 @@
+{
+  "name": "www",
+  "version": "0.0.1",
+  "authors": [
+    "seyself"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "velocity": "~1.2.2",
+    "jQuery": "2.1.4",
+    "SoundJS": "~0.6.1",
+    "PreloadJS": "~0.6.1",
+    "fastclick": "~1.0.6",
+    "eventemitter2": "~0.4.14",
+    "ua-parser-js": "~0.7.7",
+    "dat-gui": "~0.5.1"
+  }
+}

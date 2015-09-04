@@ -1,0 +1,11 @@
+{
+  "name": "html-component",
+  "version": "0.1.1",
+  "description": "",
+  "main": "bin/html-component.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

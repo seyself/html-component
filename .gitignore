@@ -1,6 +1,7 @@
 .DS_Store
 *.log
 node_modules
+bower_components
 build
 .idea
 sandbox

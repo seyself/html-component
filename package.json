@@ -1,6 +1,6 @@
 {
   "name": "html-component",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "HTML Component",
   "main": "index.js",
   "scripts": {
@@ -15,5 +15,16 @@
   "bugs": {
     "url": "https://github.com/seyself/html-component/issues"
   },
-  "homepage": "https://github.com/seyself/html-component"
+  "homepage": "https://github.com/seyself/html-component",
+  "dependencies": {
+    "aws-sdk": "^2.1.50",
+    "clean-css": "^3.4.1",
+    "exec": "^0.2.1",
+    "gulp-util": "^3.0.6",
+    "html-minifier": "^0.7.2",
+    "js-beautify": "^1.5.10",
+    "lodash": "^3.10.1",
+    "through2": "^2.0.0",
+    "uglify-js": "^2.4.24"
+  }
 }
