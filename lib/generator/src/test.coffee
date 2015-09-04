@@ -25,6 +25,7 @@ class jsx.LayoutPreviewGenerator
     
   generate: (params)->
     _params = params
+    _componentExportable = _params.use_component
 #    _assets = _params.assetsPath
     $ = _cheerio.load('<div><div id="main"></div></div>')
     $body = $('div')
