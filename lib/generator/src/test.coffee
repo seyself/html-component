@@ -5,6 +5,7 @@ beautify = require('js-beautify')
 path = require('path')
 fs = require 'fs'
 _cheerio = require('cheerio')
+_moduleDir = module.filename.replace(/\/[^/]+$/, '/')
 
 class jsx.LayoutPreviewGenerator
   
@@ -14,6 +15,7 @@ class jsx.LayoutPreviewGenerator
   _assets = 'test_layout-assets/'
   _componentExportable = true
   _ref_elements = {}
+  _packageJsonTemplate = ''
   $ = null
 
   constructor: ()->
@@ -25,7 +27,6 @@ class jsx.LayoutPreviewGenerator
     
   generate: (params)->
     _params = params
-    _componentExportable = _params.use_component
 #    _assets = _params.assetsPath
     $ = _cheerio.load('<div><div id="main"></div></div>')
     $body = $('div')
@@ -88,6 +89,12 @@ class jsx.LayoutPreviewGenerator
 
 
   _createComponents = ()->
+    if !_packageJsonTemplate
+      tmplPath = path.join(_moduleDir, '../../../template/package.json')
+      _packageJsonTemplate = fs.readFileSync(tmplPath, {encoding:'utf8'})
+      console.log 'load template : package.json'
+      console.log _packageJsonTemplate
+
     data = _components.shift()
     if data
       html = data.node.html()
@@ -98,8 +105,16 @@ class jsx.LayoutPreviewGenerator
       params = _replaceAssetPath(data, html)
       _copyComponentAssets data, params, ()->
         _createComponentFiles data, params, ()->
+          _createPackageJson(data)
           _createComponents()
-  
+
+  _createPackageJson = (data)->
+    filePath = 'components/' + data.name + '/package.json'
+    filePath = path.join(_params.cwd, filePath)
+    json = _packageJsonTemplate.split('${name}').join(data.name)
+    fs.writeFileSync(filePath, json, {encoding:'utf8'})
+
+
   _replaceAssetPath = (data, html)->
     pathes = []
     result = 
@@ -165,7 +180,9 @@ class jsx.LayoutPreviewGenerator
     if exportComment
       code += '<link rel="stylesheet" href="../html-component/dist/html-component.css" exclude>'
       code += '<style exclude>' + _getStylePSE() + '</style>'
-      code += '<!--export--><style>' + css + '</style><!--/export--></head>'
+      code += '<!--export--><style>' + css + '</style>'
+      code += '<link rel="stylesheet" href="./style.css">'
+      code += '<!--/export--></head>'
       code += '<body><!--export-->' + body + '<!--/export-->'
       code += '<script src="../libs/bundle.js" exclude></script>'
       code += '<script src="../html-component/dist/env.js" exclude></script>'
