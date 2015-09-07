@@ -62,6 +62,7 @@ class jsx.LayoutPreviewGenerator
         if _params.export_jade
           exec 'mkdir -p ' + './src/pages', ()->
             html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
+              jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
               fs.writeFile('./src/pages/' + _data.document.filename + '.jade', jade, {encoding:'utf8'}, null)
               if _componentExportable
                 _createComponents()
@@ -163,6 +164,7 @@ class jsx.LayoutPreviewGenerator
         dest = 'components/' + data.name + '/src/'
         exec 'mkdir -p ' + dest, ()->
           html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
+            jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
             fs.writeFileSync('./' + dest + data.name + '.jade', jade, {encoding:'utf8'})
             callback()
       else
