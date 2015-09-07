@@ -85,6 +85,7 @@ HtmlComponent.prototype.rename = function(currentName, replaceName, callback){
 /** コンポーネントを使ったHTMLを書き出す */
 HtmlComponent.prototype.gulp_build = require('./lib/gulp-build.js');
 
+/** PSDファイルからHTMLファイルを生成する */
 HtmlComponent.prototype.generate = require('./lib/generate.js');
 
 module.exports = new HtmlComponent();

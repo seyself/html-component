@@ -1,6 +1,7 @@
 jsx = jsx || {}
 
-RESTClient = require('node-rest-client').Client;
+RESTClient = require('node-rest-client').Client
+
 
 class jsx.LayoutJSONParser
   

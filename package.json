@@ -23,6 +23,7 @@
     "exec": "^0.2.1",
     "gulp-util": "^3.0.6",
     "html-minifier": "^0.7.2",
+    "html2jade": "^0.8.4",
     "js-beautify": "^1.5.10",
     "lodash": "^3.10.1",
     "node-rest-client": "^1.5.1",

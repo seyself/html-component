@@ -5,6 +5,7 @@ beautify = require('js-beautify')
 path = require('path')
 fs = require 'fs'
 _cheerio = require('cheerio')
+html2jade = require('html2jade')
 _moduleDir = module.filename.replace(/\/[^/]+$/, '/')
 
 class jsx.LayoutPreviewGenerator
@@ -28,7 +29,7 @@ class jsx.LayoutPreviewGenerator
   generate: (params)->
     _params = params
 #    _assets = _params.assetsPath
-    $ = _cheerio.load('<div><div id="main"></div></div>')
+    $ = _cheerio.load('<div><div id="main"></div></div>', {decodeEntities: false})
     $body = $('div')
     $main = $('div#main')
     doc = _data.document
@@ -55,10 +56,18 @@ class jsx.LayoutPreviewGenerator
     htmlFile = dest + '/' + _data.document.filename + '.html'
 
     exec 'mkdir -p ' + dest, ()->
-      fs.writeFile(htmlFile, html, null, null)
+      fs.writeFile(htmlFile, html, {encoding:'utf8'}, null)
       _copyHTMLAssets html, ()->
-        if _componentExportable
-          _createComponents()
+        # export jade
+        if _params.export_jade
+          exec 'mkdir -p ' + './src/pages', ()->
+            html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
+              fs.writeFile('./src/pages/' + _data.document.filename + '.jade', jade, {encoding:'utf8'}, null)
+              if _componentExportable
+                _createComponents()
+        else
+          if _componentExportable
+            _createComponents()
 
   _copyHTMLAssets = (html, callback)->
     pathes = []
@@ -148,8 +157,17 @@ class jsx.LayoutPreviewGenerator
   _createComponentFiles = (data, params, callback)->
     dest = 'components/' + data.name + '/dist/'
     exec 'mkdir -p ' + dest, ()->
-      fs.writeFileSync('./' + dest + data.name + '.html', params.html)
-      callback()
+      fs.writeFileSync('./' + dest + data.name + '.html', params.html, {encoding:'utf8'})
+
+      if _params.export_jade
+        dest = 'components/' + data.name + '/src/'
+        exec 'mkdir -p ' + dest, ()->
+          html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
+            fs.writeFileSync('./' + dest + data.name + '.jade', jade, {encoding:'utf8'})
+            callback()
+      else
+        callback()
+
 
   _copyComponentAssets = (data, params, callback)->
     procList = []
@@ -260,7 +278,7 @@ class jsx.LayoutPreviewGenerator
     
     tag = _createElementTag(id, layers)
 
-    $$ = _cheerio.load tag
+    $$ = _cheerio.load(tag, {decodeEntities: false})
     $div = $$('div')
 
     childContainer = $div
@@ -297,7 +315,7 @@ class jsx.LayoutPreviewGenerator
         node: $div
         data: result
       }
-      $copm = _cheerio.load('<' + cname + '></' + cname + '>')(cname)
+      $copm = _cheerio.load('<' + cname + '></' + cname + '>', {decodeEntities: false})(cname)
       $element.append $copm
     else
       $element.append $div
