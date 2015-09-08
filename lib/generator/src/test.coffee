@@ -24,6 +24,7 @@ class jsx.LayoutPreviewGenerator
 
   load: (data)->
     _data = data
+#    console.log JSON.stringify(data, null, '  ')
     return
     
   generate: (params)->
@@ -53,7 +54,8 @@ class jsx.LayoutPreviewGenerator
       body += '<script src="../components/html-component/dist/html-component-debug.js" exclude></script>'
     html = _createHTML(doc.title, style, body)
     html = beautify.html(html)
-    htmlFile = dest + '/' + _data.document.filename + '.html'
+#    htmlFile = dest + '/' + _data.document.filename + '.html'
+    htmlFile = path.join(_params.dest_dir, _params.filename)
 
     exec 'mkdir -p ' + dest, ()->
       fs.writeFile(htmlFile, html, {encoding:'utf8'}, null)
@@ -63,7 +65,7 @@ class jsx.LayoutPreviewGenerator
           exec 'mkdir -p ' + './src/pages', ()->
             html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
               jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
-              fs.writeFile('./src/pages/' + _data.document.filename + '.jade', jade, {encoding:'utf8'}, null)
+              fs.writeFile('./src/pages/' + _params.filename.replace('.html', '.jade'), jade, {encoding:'utf8'}, null)
               if _componentExportable
                 _createComponents()
         else
@@ -102,8 +104,8 @@ class jsx.LayoutPreviewGenerator
     if !_packageJsonTemplate
       tmplPath = path.join(_moduleDir, '../../../template/package.json')
       _packageJsonTemplate = fs.readFileSync(tmplPath, {encoding:'utf8'})
-      console.log 'load template : package.json'
-      console.log _packageJsonTemplate
+#      console.log 'load template : package.json'
+#      console.log _packageJsonTemplate
 
     data = _components.shift()
     if data
@@ -336,9 +338,19 @@ class jsx.LayoutPreviewGenerator
     if _isPositionRelative(data, meta, node, layers)
       css += 'position:relative;'
 
+    if data.background && data.background.image
+      bg_url = path.join(_params.assets_src_path, data.background.image)
+      bg_x = data.background.pos_x
+      bg_y = data.background.pos_y
+      if bg_y == 'middle'
+        bg_y = 'center'
+      css += 'background:url("' + bg_url + '") no-repeat;'
+      css += 'background-position:' + bg_x + ' ' + bg_y + ';'
+      css += 'background-size:cover;'
+
     # css += 'top:' + top + 'px;'
     css += 'margin-top:' + data.top + 'px;'
-    css += 'left:' + data.left + 'px;'
+    css += 'padding-left:' + data.left + 'px;'
     css += 'width:' + meta.size.width + 'px;'
     css += 'height:' + meta.size.height + 'px;'
     css += ''
@@ -349,12 +361,12 @@ class jsx.LayoutPreviewGenerator
   _createTextElementCSS = (meta)->
     size = Number(meta.text.size.replace(/\spx/, ''))
     css = ''
-    css += 'font-family:' + meta.text.font + ';'
+    css += 'font-family: "' + meta.text.font + '";'
     css += 'font-size:' + meta.text.size.replace(/\s+/g, '') + ';'
     css += 'color: #' + meta.text.color + ';'
     css += 'text-align: ' + meta.text.align + ';'
-    css += 'line-height: ' + meta.text.line_height.replace(/\s+/g, '') + ';'
-    css += 'letter-spacing: ' + (meta.text.letter_spacing / 6000 * size) + 'px;'
+    css += 'line-height: ' + meta.text.line_height?.replace(/\s+/g, '') + ';'
+    css += 'letter-spacing: ' + (meta.text?.letter_spacing / 6000 * size) + 'px;'
     return css
 
   _isPositionRelative = (data, meta, node, layers)->
@@ -405,7 +417,7 @@ class jsx.LayoutPreviewGenerator
     style = ''
     style += '.pse {'
     style += 'position:absolute;'
-    style += 'display:inline-block;'
+    style += 'display:block;'
     style += 'box-sizing:border-box;'
     style += 'top:0;'
     style += 'margin:0;'

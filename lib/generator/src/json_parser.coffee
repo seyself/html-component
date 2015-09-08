@@ -58,11 +58,27 @@ class jsx.LayoutJSONParser
     len = list.length
     prev_id = null
     next_id = null
+    parent_id = index.id
     minY = 9999999999
     maxY = 0
     for i in [0...len]
       item = list[i]
       layer = layers[item.id]
+      option = _options[item.id]
+      if option.use_background
+        parent = layers[parent_id]
+        parent.background =
+          image: option.layer_name
+          pos_x: option.horizontal
+          pos_y: option.vertical
+        item.enabled = false
+        option.enabled = false
+        item.top = 0
+        item.left = 0
+        item.bottom = 0
+        item.right = 0
+        continue
+
       if layer
         item.top    = layer.meta.position.absolute.y
         item.left   = layer.meta.position.absolute.x
@@ -88,7 +104,7 @@ class jsx.LayoutJSONParser
     for i in [0...len]
       item = list[i]
       if item.enabled
-        if bottomBorder < item.bottom
+        if bottomBorder <= item.bottom
           bottomBorder = item.bottom
         else
           isPositionRelative = false
@@ -101,7 +117,8 @@ class jsx.LayoutJSONParser
       next_id = if next then next.id else null
       item.next_id = next_id
       item.prev_id = prev_id
-      prev_id = item.id
+      if item.enabled
+        prev_id = item.id
       _setupIndexData(item, layers)
 
   _indexPositionSort = (a, b)->
