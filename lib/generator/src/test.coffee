@@ -29,11 +29,13 @@ class jsx.LayoutPreviewGenerator
     
   generate: (params)->
     _params = params
+    doc = _data.document
+
 #    _assets = _params.assetsPath
-    $ = _cheerio.load('<div><div id="main"></div></div>', {decodeEntities: false})
+    $ = _cheerio.load('<div><div id="main" class="_' + doc.filename + '"></div></div>', {decodeEntities: false})
     $body = $('div')
     $main = $('div#main')
-    doc = _data.document
+
     if !dest
       dest = './build'
 
@@ -75,14 +77,15 @@ class jsx.LayoutPreviewGenerator
   _copyHTMLAssets = (html, callback)->
     pathes = []
     matches = html.match(/"[^"]+\.(png|jpg|gif|json|svg|swf|mp3|mp4|mov|wav|ogg|webm)"/gm)
-    matches.forEach (code)->
-      code = code.replace(/"/g, '')
-      src = path.dirname(code)
-      if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
-        # not replace
-        # console.log code
-      else if pathes.indexOf(src) < 0
-        pathes.push(src)
+    if matches
+      matches.forEach (code)->
+        code = code.replace(/"/g, '')
+        src = path.dirname(code)
+        if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+          # not replace
+          # console.log code
+        else if pathes.indexOf(src) < 0
+          pathes.push(src)
 
     copyList = []
     for src in pathes
@@ -108,6 +111,7 @@ class jsx.LayoutPreviewGenerator
 #      console.log _packageJsonTemplate
 
     data = _components.shift()
+
     if data
       html = data.node.html()
       html = '<div class="pse l' + data.id + ' ' + data.name + '">' + html + '</div>'
@@ -249,12 +253,12 @@ class jsx.LayoutPreviewGenerator
     offsetX = doc.offsetX
     offsetY = doc.offsetY
     result.css = ''
-    _generateNodeList(indexes.children, doc, layers, $main, $main, result, doc.offsetX, doc.offsetY)
+    _generateNodeList(indexes.children, doc, layers, $main, $main, result, doc.offsetX, doc.offsetY, '_' + doc.filename)
 
-  _generateNodeList = (list, doc, layers, $root, $element, result, offsetX, offsetY)->
+  _generateNodeList = (list, doc, layers, $root, $element, result, offsetX, offsetY, component)->
     for child in list
       if child.enabled
-        _generateNode(child, doc, layers, $root, $element, result, offsetX, offsetY)
+        _generateNode(child, doc, layers, $root, $element, result, offsetX, offsetY, component)
 
 
   _createElementTag = (id, layers)->
@@ -274,7 +278,7 @@ class jsx.LayoutPreviewGenerator
     tag = '<div class="pse l'+id+' ' + option.name + '">' + tag + '</div>'
     return tag
 
-  _generateNode = (node, doc, layers, $root, $element, result, offsetX, offsetY)->
+  _generateNode = (node, doc, layers, $root, $element, result, offsetX, offsetY, component)->
     id = node.id
     data = layers[id]
     option = data.option
@@ -290,7 +294,12 @@ class jsx.LayoutPreviewGenerator
     if option?.link_url
       childContainer = $$('a')
 
-    css = _createElementCSS(id, node, layers, offsetX, offsetY)
+    isComponentRoot = false
+    if _componentExportable && data.option.component
+      isComponentRoot = true
+      component = data.option.component
+
+    css = _createElementCSS(id, node, layers, offsetX, offsetY, component, isComponentRoot)
     
     if _componentExportable && data.option.component
       result = {
@@ -310,7 +319,7 @@ class jsx.LayoutPreviewGenerator
       if ref_node
         childContainer.append(ref_node.html())
     else
-      _generateNodeList(node.children, doc, layers, $root, childContainer, result, 0, 0)
+      _generateNodeList(node.children, doc, layers, $root, childContainer, result, 0, 0, component)
 
     if _componentExportable && data.option.component
       cname = data.option.component
@@ -325,11 +334,16 @@ class jsx.LayoutPreviewGenerator
     else
       $element.append $div
 
-  _createElementCSS = (id, node, layers, offsetX, offsetY)->
+  _createElementCSS = (id, node, layers, offsetX, offsetY, component, isComponentRoot)->
     data = layers[id]
     meta = data.meta
-
-    css = '.l' + id + '{'
+    css = ''
+    if component
+      if isComponentRoot
+        css += '.' + component
+      else
+        css += '.' + component + ' '
+    css += '.l' + id + '{'
     if meta.text
       css += _createTextElementCSS(meta)
 
@@ -383,7 +397,7 @@ class jsx.LayoutPreviewGenerator
       css += 'left:' + data.left + 'px;'
 
     if data.option.vertical == 'middle'
-      css += 'top:50%;'
+      css += 'margin-top:50%;'
       translateY = '-50%'
     else if data.option.vertical == 'bottom' && parent
       css += 'bottom:' + (parent.meta.size.height - data.meta.size.height - data.top) + 'px;'
