@@ -64,6 +64,9 @@ class jsx.LayoutJSONParser
     for i in [0...len]
       item = list[i]
       layer = layers[item.id]
+      if layer
+        layer.parent_id = parent_id
+        layer.childIndex = i
       option = _options[item.id]
       if option.use_background
         parent = layers[parent_id]

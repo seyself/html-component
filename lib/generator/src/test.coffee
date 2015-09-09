@@ -199,6 +199,7 @@ class jsx.LayoutPreviewGenerator
     code = '<!DOCTYPE html><html><head>'
     code += '<meta charset="utf-8">'
     code += '<title>' + title + '</title>'
+    code += '<meta name="viewport" content="width=device-width, initial-scale=1">'
     if exportComment
       code += '<link rel="stylesheet" href="../html-component/dist/html-component.css" exclude>'
       code += '<style exclude>' + _getStylePSE() + '</style>'
@@ -334,8 +335,9 @@ class jsx.LayoutPreviewGenerator
 
     data.top = meta.position.relative.y + offsetY
     data.left = meta.position.relative.x + offsetX
-    
-    if _isPositionRelative(data, meta, node, layers)
+
+    isRelative = _isPositionRelative(data, meta, node, layers)
+    if isRelative
       css += 'position:relative;'
 
     if data.background && data.background.image
@@ -348,9 +350,51 @@ class jsx.LayoutPreviewGenerator
       css += 'background-position:' + bg_x + ' ' + bg_y + ';'
       css += 'background-size:cover;'
 
-    # css += 'top:' + top + 'px;'
-    css += 'margin-top:' + data.top + 'px;'
-    css += 'padding-left:' + data.left + 'px;'
+#    # css += 'top:' + top + 'px;'
+#    if data.option.horizontal == 'left' && data.option.vertical == 'top'
+#      css += 'margin-top:' + data.top + 'px;'
+#      css += 'padding-left:' + data.left + 'px;'
+#    if data.option.horizontal == 'center' && data.option.vertical == 'top'
+#      css += 'margin-top:' + data.top + 'px;'
+#      css += 'margin-left:auto;'
+#      css += 'margin-right:auto;'
+#    if data.option.horizontal == 'right' && data.option.vertical == 'top'
+#      css += 'margin-top:' + data.top + 'px;'
+#      css += 'margin-left:auto;'
+#      css += 'margin-right:' + data.left + 'px;'
+
+    parent = layers[data.parent_id]
+    translateX = 0
+    translateY = 0
+    if data.option.horizontal == 'center'
+      if isRelative
+        css += 'margin-left:auto;'
+        css += 'margin-right:auto;'
+      else
+        css += 'left:50%;'
+        translateX = '-50%'
+    else if data.option.horizontal == 'right' && parent
+      if isRelative
+        css += 'margin-left:auto;'
+        css += 'margin-right:' + (parent.meta.size.width - data.meta.size.width - data.left) + 'px;'
+      else
+        css += 'right:' + (parent.meta.size.width - data.meta.size.width - data.left) + 'px;'
+    else #if data.option.horizontal == 'left'
+      css += 'left:' + data.left + 'px;'
+
+    if data.option.vertical == 'middle'
+      css += 'top:50%;'
+      translateY = '-50%'
+    else if data.option.vertical == 'bottom' && parent
+      css += 'bottom:' + (parent.meta.size.height - data.meta.size.height - data.top) + 'px;'
+    else #if data.option.vertical == 'top'
+      css += 'margin-top:' + data.top + 'px;'
+
+    if translateX || translateY
+      css += 'transform:translate(' + translateX + ', ' + translateY + ');'
+
+#    css += 'padding-top:1px;'
+
     css += 'width:' + meta.size.width + 'px;'
     css += 'height:' + meta.size.height + 'px;'
     css += ''
@@ -418,8 +462,10 @@ class jsx.LayoutPreviewGenerator
     style += '.pse {'
     style += 'position:absolute;'
     style += 'display:block;'
+    style += 'overflow:hidden;'
     style += 'box-sizing:border-box;'
     style += 'top:0;'
+    style += 'left:0;'
     style += 'margin:0;'
     style += 'padding:0;'
     # style += 'border: solid 1px #999;'
