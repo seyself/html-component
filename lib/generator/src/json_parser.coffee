@@ -61,9 +61,11 @@ class jsx.LayoutJSONParser
     parent_id = index.id
     minY = 9999999999
     maxY = 0
+
     for i in [0...len]
       item = list[i]
       layer = layers[item.id]
+
       if layer
         layer.parent_id = parent_id
         layer.childIndex = i
@@ -120,6 +122,12 @@ class jsx.LayoutJSONParser
       next_id = if next then next.id else null
       item.next_id = next_id
       item.prev_id = prev_id
+
+      layer = layers[item.id]
+      if layer
+        layer.next_id = next_id
+        layer.prev_id = prev_id
+
       if item.enabled
         prev_id = item.id
       _setupIndexData(item, layers)

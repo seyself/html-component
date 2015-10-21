@@ -1,11 +1,21 @@
 jsx = jsx || {}
 
+RE_ASSET_FILE = /"[^"]+\.(png|jpg|gif|json|svg|swf|mp3|mp4|mov|wav|ogg|webm)"/gm
+INDENT_STR = '  '
+
+
 exec = require 'exec'
-beautify = require('js-beautify')
-path = require('path')
+beautify = require 'js-beautify'
+path = require 'path'
 fs = require 'fs'
-_cheerio = require('cheerio')
-html2jade = require('html2jade')
+_cheerio = require 'cheerio'
+html2jade = require 'html2jade'
+stylus = require 'stylus'
+nib = require 'nib'
+
+htmlTemplate = new jsx.HtmlTemplate()
+stylusTemplate = new jsx.StylusTemplate()
+
 _moduleDir = module.filename.replace(/\/[^/]+$/, '/')
 
 class jsx.LayoutPreviewGenerator
@@ -24,14 +34,12 @@ class jsx.LayoutPreviewGenerator
 
   load: (data)->
     _data = data
-#    console.log JSON.stringify(data, null, '  ')
     return
     
   generate: (params)->
     _params = params
     doc = _data.document
 
-#    _assets = _params.assetsPath
     $ = _cheerio.load('<div><div id="main" class="_' + doc.filename + '"></div></div>', {decodeEntities: false})
     $body = $('div')
     $main = $('div#main')
@@ -42,6 +50,14 @@ class jsx.LayoutPreviewGenerator
     _components = []
     _ref_elements = {}
 
+    htmlFile = path.join(_params.dest_dir, _params.filename)
+    jadeFile = './src/pages/' + _params.filename.replace('.html', '.jade')
+    cssFile = path.join(_params.dest_dir, 'css')
+    cssFile = path.join(cssFile, path.basename(htmlFile).replace('.html', '.css'))
+    stylusFile = './src/pages/css/' + _params.filename.replace('.html', '.styl')
+    cssPath = path.relative path.dirname(htmlFile), cssFile
+    jsPath = cssPath.replace /[^\/]+\/([^.]+)\.css/, 'js/$1.js'
+
     params = {}
     style = _getBasicStyle(_data.document)
     _generateRelativeLayout(_data, $main, params)
@@ -50,33 +66,61 @@ class jsx.LayoutPreviewGenerator
     body = $body.html()
     body = '<div id="container">' + body + '</div>'
     if _componentExportable
-      body += '<script src="../components/libs/bundle.js" exclude></script>'
-      body += '<script src="../components/html-component/dist/env.js" exclude></script>'
-      body += '<script src="../components/html-component/dist/html-component.js" exclude></script>'
-      body += '<script src="../components/html-component/dist/html-component-debug.js" exclude></script>'
-    html = _createHTML(doc.title, style, body)
-    html = beautify.html(html)
-#    htmlFile = dest + '/' + _data.document.filename + '.html'
-    htmlFile = path.join(_params.dest_dir, _params.filename)
+      body += htmlTemplate.scriptTags(jsPath)
 
-    exec 'mkdir -p ' + dest, ()->
+    html = _createHTML(doc.title, cssPath, body)
+    html = beautify.html(html)
+
+    _createDestDir dest, ()->
       fs.writeFile(htmlFile, html, {encoding:'utf8'}, null)
       _copyHTMLAssets html, ()->
         # export jade
         if _params.export_jade
           exec 'mkdir -p ' + './src/pages', ()->
             html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
-              jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
-              fs.writeFile('./src/pages/' + _params.filename.replace('.html', '.jade'), jade, {encoding:'utf8'}, null)
+              jade = _replaceJadeFormat(jade)
+              fs.writeFile(jadeFile, jade, {encoding:'utf8'}, null)
+
+              exec 'mkdir -p ' + './src/pages/css', ()->
+                fs.writeFile(stylusFile, style, {encoding:'utf8'}, null)
+                _generateCSS cssFile, style
+
               if _componentExportable
                 _createComponents()
         else
           if _componentExportable
             _createComponents()
 
+  _createDestDir = (dest, callback)->
+    exec 'mkdir -p ' + path.join(dest, 'js'), ()->
+      exec 'mkdir -p ' + path.join(dest, 'css'), ()->
+        exec 'mkdir -p ' + 'src/pages/js', ()->
+          exec 'mkdir -p ' + 'src/pages/css', ()->
+            exec 'mkdir -p ' + 'src/assets', ()->
+              exec 'mkdir -p ' + 'src/libs', ()->
+                if callback
+                  callback()
+
+  _replaceJadeFormat = (jade)->
+    jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
+    jade = jade.replace(/\/\/\s/g, '//')
+    jade = jade.split('//- if (debug) {').join('- if (debug) {')
+    jade = jade.split('//- }').join('- }')
+    return jade
+
+  _generateCSS = (cssFile, style)->
+    stylus(style)
+    .set('compress', false)
+    .use(nib())
+    .render (err, css)->
+      if err
+        console.log 'stylus #render() >>', err
+      else
+        fs.writeFile(cssFile, css, {encoding:'utf8'}, null)
+
   _copyHTMLAssets = (html, callback)->
     pathes = []
-    matches = html.match(/"[^"]+\.(png|jpg|gif|json|svg|swf|mp3|mp4|mov|wav|ogg|webm)"/gm)
+    matches = html.match(RE_ASSET_FILE)
     if matches
       matches.forEach (code)->
         code = code.replace(/"/g, '')
@@ -107,22 +151,37 @@ class jsx.LayoutPreviewGenerator
     if !_packageJsonTemplate
       tmplPath = path.join(_moduleDir, '../../../template/package.json')
       _packageJsonTemplate = fs.readFileSync(tmplPath, {encoding:'utf8'})
-#      console.log 'load template : package.json'
-#      console.log _packageJsonTemplate
 
     data = _components.shift()
 
     if data
-      html = data.node.html()
-      html = '<div class="pse l' + data.id + ' ' + data.name + '">' + html + '</div>'
-      css = data.data.css
-      html = _createHTML(data.name, css, html, true)
-      html = beautify.html(html)
-      params = _replaceAssetPath(data, html)
-      _copyComponentAssets data, params, ()->
-        _createComponentFiles data, params, ()->
-          _createPackageJson(data)
+      packageJsonPath = 'components/' + data.name + '/package.json'
+      isWritable = true
+      if fs.existsSync(packageJsonPath)
+        packageJson = fs.readFileSync(packageJsonPath, {encoding:'utf8'})
+        packageJson = JSON.parse(packageJson)
+
+        # package.jsonのversionが'0.0.0'以外の時はコンポーネントは作らない
+        if packageJson.version != '0.0.0'
           _createComponents()
+          return
+
+      console.log 'create component #' + data.name
+
+      html = data.node.html()
+      html = '<div class="pse ' + data.name + '">' + html + '</div>'
+      cssFile = data.name + '.css'
+
+      stylusTemplate.componentBaseCSS (baseCSS)->
+        html = _createHTML(data.name, cssFile, html, true, baseCSS)
+        html = beautify.html(html)
+        params = _replaceAssetPath(data, html)
+        _copyComponentAssets data, params, ()->
+          _createComponentFiles data, params, ()->
+            _createPackageJson(data)
+            _createComponents()
+
+
 
   _createPackageJson = (data)->
     filePath = 'components/' + data.name + '/package.json'
@@ -138,8 +197,8 @@ class jsx.LayoutPreviewGenerator
       base: 'components/' + data.name + '/dist/'
       assets: []
     dstBase = result.base
-    matches = html.match(/"[^"]+\.(png|jpg|gif|json|svg|swf|mp3|mp4|mov|wav|ogg|webm)"/gm)
-    matches.forEach (code)->
+    matches = html.match(RE_ASSET_FILE)
+    matches?.forEach (code)->
       code = code.replace(/"/g, '')
       src = path.dirname(code)
       if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
@@ -162,16 +221,23 @@ class jsx.LayoutPreviewGenerator
     return result
 
   _createComponentFiles = (data, params, callback)->
-    dest = 'components/' + data.name + '/dist/'
-    exec 'mkdir -p ' + dest, ()->
-      fs.writeFileSync('./' + dest + data.name + '.html', params.html, {encoding:'utf8'})
+    dstDir = 'components/' + data.name + '/dist/'
+    srcDir = 'components/' + data.name + '/src/'
+    style = data.data.css
+    htmlFile = './' + dstDir + data.name + '.html'
+    cssFile = './' + dstDir + data.name + '.css'
+    jadeFile = './' + srcDir + data.name + '.jade'
+    stylFile = './' + srcDir + data.name + '.styl'
+    exec 'mkdir -p ' + dstDir, ()->
+      fs.writeFileSync(htmlFile, params.html, {encoding:'utf8'})
+      _generateCSS cssFile, style
 
       if _params.export_jade
-        dest = 'components/' + data.name + '/src/'
-        exec 'mkdir -p ' + dest, ()->
+        exec 'mkdir -p ' + srcDir, ()->
           html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
-            jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
-            fs.writeFileSync('./' + dest + data.name + '.jade', jade, {encoding:'utf8'})
+            jade = _replaceJadeFormat(jade)
+            fs.writeFileSync(jadeFile, jade, {encoding:'utf8'})
+            fs.writeFileSync(stylFile, style, {encoding:'utf8'})
             callback()
       else
         callback()
@@ -199,51 +265,20 @@ class jsx.LayoutPreviewGenerator
 
     nextProc()
 
-  _createHTML = (title, css, body, exportComment)->
-    code = '<!DOCTYPE html><html><head>'
-    code += '<meta charset="utf-8">'
-    code += '<title>' + title + '</title>'
-    code += '<meta name="viewport" content="width=device-width, initial-scale=1">'
+  _createHTML = (title, cssPath, body, exportComment, baseCSS)->
+    code = htmlTemplate.head title
     if exportComment
-      code += '<link rel="stylesheet" href="../html-component/dist/html-component.css" exclude>'
-      code += '<style exclude>' + _getStylePSE() + '</style>'
-      code += '<!--export--><style>' + css + '</style>'
-      code += '<link rel="stylesheet" href="./style.css">'
-      code += '<!--/export--></head>'
-      code += '<body><!--export-->' + body + '<!--/export-->'
-      code += '<script src="../libs/bundle.js" exclude></script>'
-      code += '<script src="../html-component/dist/env.js" exclude></script>'
-      code += '<script src="../html-component/dist/html-component.js" exclude></script>'
-      code += '<script src="../html-component/dist/html-component-debug.js" exclude></script>'
-      code += '</body></html>'
+      jsPath = cssPath.replace('.css', '.js')
+      code += htmlTemplate.componentCssCode cssPath, baseCSS
+      code += htmlTemplate.componentBodyCode body, htmlTemplate.componentScriptTags(jsPath)
     else
-      code += '<link rel="stylesheet" href="../components/html-component/dist/html-component.css" exclude>'
       code += _getMetaData()
-      code += '<style>' + css + '</style><!--include components-css--></head>'
-      code += '<body>' + body
-      code += '<!--include components-js--></body></html>'
+      code += htmlTemplate.cssCode cssPath
+      code += htmlTemplate.bodyCode body
     return code
 
   _getMetaData = ()->
-    _meta = _data.meta
-    code = ''
-    if _meta
-      code += '<meta name="description" content="' + _meta.meta_description + '">'
-      code += '<meta name="keywords" content="' + _meta.meta_keywords + '">'
-      code += '<meta name="viewport" content="width=device-width,initial-scale=1">'
-      code += '<meta property="og:title" content="' + _meta.meta_name + '">'
-      code += '<meta property="og:site_name" content="' + _meta.meta_name + '">'
-      code += '<meta property="og:type" content="website">'
-      code += '<meta property="og:url" content="' + _meta.meta_url + '">'
-      code += '<meta property="og:description" content="' + _meta.meta_description + '">'
-      code += '<meta property="og:image" content="' + _meta.meta_image + '">'
-      code += '<meta property="og:locale" content="' + _meta.meta_locale + '">'
-      code += '<meta http-equiv="X-UA-Compatible" content="IE=edge">'
-      code += '<meta http-equiv="Content-Style-Type" content="text/css">'
-      code += '<meta http-equiv="Content-Script-Type" content="text/javascript">'
-      code += '<!--link rel="apple-touch-icon" href="images/touch-icon-iphone.png"-->'
-      code += '<!--link rel="shortcut icon" href="images/favicon.ico"-->'
-    return code
+    return htmlTemplate.metaData _data.meta
 
 
   _generateRelativeLayout = (params, $main, result)->
@@ -252,13 +287,15 @@ class jsx.LayoutPreviewGenerator
     indexes = params.index
     offsetX = doc.offsetX
     offsetY = doc.offsetY
-    result.css = ''
-    _generateNodeList(indexes.children, doc, layers, $main, $main, result, doc.offsetX, doc.offsetY, '_' + doc.filename)
+    className = '_' + doc.filename
+    result.css = '.' + className + '\n'
+    indentLevel = 1
+    _generateNodeList(indexes.children, className, indentLevel, doc, layers, $main, $main, result, doc.offsetX, doc.offsetY, className, false)
 
-  _generateNodeList = (list, doc, layers, $root, $element, result, offsetX, offsetY, component)->
+  _generateNodeList = (list, parentName, indentLevel, doc, layers, $root, $element, result, offsetX, offsetY, component, isRoot)->
     for child in list
       if child.enabled
-        _generateNode(child, doc, layers, $root, $element, result, offsetX, offsetY, component)
+        _generateNode(child, parentName, indentLevel, doc, layers, $root, $element, result, offsetX, offsetY, component, isRoot)
 
 
   _createElementTag = (id, layers)->
@@ -270,15 +307,15 @@ class jsx.LayoutPreviewGenerator
     if meta.type == 'text'
       tag = _getText(meta.text.text)
     else if meta.type == 'image'
-      tag = '<img src="' + path.join(_params.assets_src_path, meta.image.url) + '" alt="' + meta.image.text.join(' ') + '">'
-    
+      tag = htmlTemplate.imageBlock(meta, _params.assets_src_path)
+
     if option?.link_url
       tag = '<a href="' + option.link_url + '" target="' + option.link_target + '">' + tag + '</a>'
-    
-    tag = '<div class="pse l'+id+' ' + option.name + '">' + tag + '</div>'
+
+    tag = '<div class="pse ' + option.name + '">' + tag + '</div>'
     return tag
 
-  _generateNode = (node, doc, layers, $root, $element, result, offsetX, offsetY, component)->
+  _generateNode = (node, parentName, indentLevel, doc, layers, $root, $element, result, offsetX, offsetY, component, isRoot)->
     id = node.id
     data = layers[id]
     option = data.option
@@ -286,6 +323,11 @@ class jsx.LayoutPreviewGenerator
     meta = data.meta
     
     tag = _createElementTag(id, layers)
+    className = option.name
+    if parentName
+      classPath = parentName + ' ' + className
+    else
+      classPath = className
 
     $$ = _cheerio.load(tag, {decodeEntities: false})
     $div = $$('div')
@@ -294,19 +336,21 @@ class jsx.LayoutPreviewGenerator
     if option?.link_url
       childContainer = $$('a')
 
-    isComponentRoot = false
+    isComponentRoot = isRoot
     if _componentExportable && data.option.component
       isComponentRoot = true
       component = data.option.component
+      className = component
 
-    css = _createElementCSS(id, node, layers, offsetX, offsetY, component, isComponentRoot)
-    
-    if _componentExportable && data.option.component
+      result.css += _createComponentCSS(id, className, indentLevel, node, layers, offsetX, offsetY)
       result = {
-        css: css + '\n'
+        css: ''
       }
-    else
-      result.css += css + '\n'
+      indentLevel = 0
+
+    css = _createElementCSS(id, className, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)
+
+    result.css += css + '\n'
 
     if doc.referers.indexOf(id) >= 0
       _ref_elements[id] = childContainer
@@ -319,7 +363,7 @@ class jsx.LayoutPreviewGenerator
       if ref_node
         childContainer.append(ref_node.html())
     else
-      _generateNodeList(node.children, doc, layers, $root, childContainer, result, 0, 0, component)
+      _generateNodeList(node.children, classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
 
     if _componentExportable && data.option.component
       cname = data.option.component
@@ -334,216 +378,105 @@ class jsx.LayoutPreviewGenerator
     else
       $element.append $div
 
-  _createElementCSS = (id, node, layers, offsetX, offsetY, component, isComponentRoot)->
+  _createComponentCSS = (id, classPath, indentLevel, node, layers, offsetX, offsetY)->
     data = layers[id]
     meta = data.meta
+    _indent = _getIndent(indentLevel, INDENT_STR)
     css = ''
-    if component
-      if isComponentRoot
-        css += '.' + component
-      else
-        css += '.' + component + ' '
-    css += '.l' + id + '{'
-    if meta.text
-      css += _createTextElementCSS(meta)
+    if _indent
+      css += _indent + '& > .' + classPath + '\n'
+    else
+      css += _indent + '.' + classPath + '\n'
+
+    _indent += INDENT_STR
 
     data.top = meta.position.relative.y + offsetY
     data.left = meta.position.relative.x + offsetX
 
     isRelative = _isPositionRelative(data, meta, node, layers)
-    if isRelative
-      css += 'position:relative;'
+    parent = layers[data.parent_id]
+    css += stylusTemplate.position(data, _indent, parent, isRelative, false)
+#    css += stylusTemplate.size(data, _indent)
+
+    return css
+
+
+  _createElementCSS = (id, classPath, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)->
+    data = layers[id]
+    meta = data.meta
+    _indent = _getIndent(indentLevel, INDENT_STR)
+    css = ''
+    if _indent
+      css += _indent + '& > .' + classPath + '\n'
+    else
+      css += _indent + '.' + classPath + '\n'
+
+    _indent += INDENT_STR
+
+    if meta.text
+      css += _createTextElementCSS(meta, _indent)
+
+    data.top = meta.position.relative.y + offsetY
+    data.left = meta.position.relative.x + offsetX
 
     if data.background && data.background.image
-      bg_url = path.join(_params.assets_src_path, data.background.image)
-      bg_x = data.background.pos_x
-      bg_y = data.background.pos_y
-      if bg_y == 'middle'
-        bg_y = 'center'
-      css += 'background:url("' + bg_url + '") no-repeat;'
-      css += 'background-position:' + bg_x + ' ' + bg_y + ';'
-      css += 'background-size:cover;'
+      css += stylusTemplate.background(data, _indent, _params.assets_src_path)
 
-#    # css += 'top:' + top + 'px;'
-#    if data.option.horizontal == 'left' && data.option.vertical == 'top'
-#      css += 'margin-top:' + data.top + 'px;'
-#      css += 'padding-left:' + data.left + 'px;'
-#    if data.option.horizontal == 'center' && data.option.vertical == 'top'
-#      css += 'margin-top:' + data.top + 'px;'
-#      css += 'margin-left:auto;'
-#      css += 'margin-right:auto;'
-#    if data.option.horizontal == 'right' && data.option.vertical == 'top'
-#      css += 'margin-top:' + data.top + 'px;'
-#      css += 'margin-left:auto;'
-#      css += 'margin-right:' + data.left + 'px;'
-
+    isRelative = _isPositionRelative(data, meta, node, layers)
     parent = layers[data.parent_id]
-    translateX = 0
-    translateY = 0
-    if data.option.horizontal == 'center'
-      if isRelative
-        css += 'margin-left:auto;'
-        css += 'margin-right:auto;'
-      else
-        css += 'left:50%;'
-        translateX = '-50%'
-    else if data.option.horizontal == 'right' && parent
-      if isRelative
-        css += 'margin-left:auto;'
-        css += 'margin-right:' + (parent.meta.size.width - data.meta.size.width - data.left) + 'px;'
-      else
-        css += 'right:' + (parent.meta.size.width - data.meta.size.width - data.left) + 'px;'
-    else #if data.option.horizontal == 'left'
-      css += 'left:' + data.left + 'px;'
 
-    if data.option.vertical == 'middle'
-      css += 'margin-top:50%;'
-      translateY = '-50%'
-    else if data.option.vertical == 'bottom' && parent
-      css += 'bottom:' + (parent.meta.size.height - data.meta.size.height - data.top) + 'px;'
-    else #if data.option.vertical == 'top'
-      css += 'margin-top:' + data.top + 'px;'
-
-    if translateX || translateY
-      css += 'transform:translate(' + translateX + ', ' + translateY + ');'
-
-#    css += 'padding-top:1px;'
-
-    css += 'width:' + meta.size.width + 'px;'
-    css += 'height:' + meta.size.height + 'px;'
+    css += stylusTemplate.position(data, _indent, parent, isRelative, isComponentRoot)
+    css += stylusTemplate.size(data, _indent)
     css += ''
-    css += '}'
+    css += ''
 
     return css
 
-  _createTextElementCSS = (meta)->
-    size = Number(meta.text.size.replace(/\spx/, ''))
-    css = ''
-    css += 'font-family: "' + meta.text.font + '";'
-    css += 'font-size:' + meta.text.size.replace(/\s+/g, '') + ';'
-    css += 'color: #' + meta.text.color + ';'
-    css += 'text-align: ' + meta.text.align + ';'
-    css += 'line-height: ' + meta.text.line_height?.replace(/\s+/g, '') + ';'
-    css += 'letter-spacing: ' + (meta.text?.letter_spacing / 6000 * size) + 'px;'
-    return css
+
+  _getIndent = (level, str)->
+    unless str
+      str = '\t'
+
+    code = ''
+    for i in [0...level]
+      code += str
+    return code
+
+  _createTextElementCSS = (meta, indent)->
+    return stylusTemplate.textElement meta, indent
 
   _isPositionRelative = (data, meta, node, layers)->
-    if node.positionRelative && node.prev_id
+#    if data.meta.name == 'title'
+#      console.log data.meta.name
+#      prev = layers[node.prev_id]
+#      console.log data
+#      console.log prev
+#      console.log node.positionRelative
+
+    if node.prev_id
       prev = layers[node.prev_id]
       if prev
-        data.top = meta.position.absolute.y - prev.bounds.bottom
-      return true
+        if prev.bounds.bottom <= data.bounds.top
+          data.top = data.bounds.top - prev.bounds.bottom
+          return true
+
+        if node.positionRelative
+          data.top = meta.position.absolute.y - prev.bounds.bottom
+          return true
+
     if !node.prev_id
       return true
     return false
 
 
   _getBasicStyle = (params)->
-    style = 'body {'
-    style += 'position:relative;'
-    style += 'margin:0;'
-    style += 'padding:0;'
-    style += 'min-height:100%;'
-    style += 'background:'+params.bgcolor+';'
-    style += '}\n'
-    style += '#container {'
-    style += 'position:relative;'
-    style += 'margin:' + params.margin + ';'
-    style += 'padding:0;'
-    style += 'width:100%;'
-    style += '}\n'
-    style += '#main {'
-    style += 'position:relative;'
-    style += 'margin:0 auto;'
-    style += 'padding:0;'
-    style += 'width:'+params.width+'px;'
-    style += '}\n'
-    style += 'p {'
-    style += 'position:relative;'
-    style += 'margin:0 0 32px;'
-    style += 'padding:0;'
-    style += '}\n'
-    style += 'span, img, a {'
-    style += 'display:inline-block;'
-    style += 'margin:0;'
-    style += 'padding:0;'
-    style += '}\n'
-    style += _getStylePSE()
-    return style
+    return stylusTemplate.basicStyle params
 
   _getStylePSE = ()->
-    style = ''
-    style += '.pse {'
-    style += 'position:absolute;'
-    style += 'display:block;'
-    style += 'overflow:hidden;'
-    style += 'box-sizing:border-box;'
-    style += 'top:0;'
-    style += 'left:0;'
-    style += 'margin:0;'
-    style += 'padding:0;'
-    # style += 'border: solid 1px #999;'
-    # style += 'transparent:true;'
-    # style += 'opacity:0.5;'
-    # style += 'background:#FF0000;'
-    style += '}\n'
-    return style
-
+    return stylusTemplate.pse()
 
   _getText = (text)->
-    texts = text.split('\n\n')
-    text = '<p>' + texts.join('</p><p>') + '</p>'
-    text = text.replace(/\n/g, '<br>')
-    return text
+    return htmlTemplate.textBlock text
 
 
 module.exports = jsx
-
-
-
-
-# _generateAbsoluteLayout = (params, $main, result)->
-  #   doc = params.document
-  #   layers = params.layers
-  #   assets = 'test_layout-assets/'
-  #   offsetX = doc.offsetX
-  #   offsetY = doc.offsetY
-  #   result.css = ''
-
-  #   for id, data of layers
-  #     meta = data.meta
-  #     $$ = _cheerio.load '<div id="c'+id+'"></div>'
-  #     $div = $$('div')
-  #     if meta.type == 'text'
-  #       $div.append _getText(meta.text.text)
-  #     else if meta.type == 'image'
-  #       $div.append '<img src="' + assets + meta.image.url + '" alt="' + meta.image.text.join(' ') + '">'
-      
-  #     $main.append $div
-
-  #     css = '#c' + id + '{'
-  #     css += 'position:absolute;'
-  #     css += 'display:block;'
-  #     css += 'margin:0;'
-  #     css += 'padding:0;'
-  #     # css += 'border: solid 1px #999;'
-  #     # css += 'transparent:true;'
-  #     # css += 'opacity:0.5;'
-  #     # css += 'background:#FF0000;'
-  #     if meta.text
-  #       size = Number(meta.text.size.replace(/\spx/, ''));
-  #       css += 'font-family:' + meta.text.font + ';'
-  #       css += 'font-size:' + meta.text.size.replace(/\s+/g, '') + ';'
-  #       css += 'color: #' + meta.text.color + ';'
-  #       css += 'text-align: ' + meta.text.align + ';'
-  #       css += 'line-height: ' + meta.text.line_height.replace(/\s+/g, '') + ';'
-  #       css += 'letter-spacing: ' + (meta.text.letter_spacing / 6000 * size) + 'px;'
-
-  #     css += 'top:' + (meta.position.absolute.y + offsetY) + 'px;'
-  #     css += 'left:' + (meta.position.absolute.x + offsetX) + 'px;'
-  #     css += 'width:' + meta.size.width + 'px;'
-  #     css += 'height:' + meta.size.height + 'px;'
-  #     css += ''
-  #     css += '}'
-
-  #     result.css += css + '\n'

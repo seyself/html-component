@@ -1,9 +1,11 @@
 'use strict';
 
+var path = require('path');
 var fs = require('fs');
 var exec = require('exec');
+var credentials = path.join(process.cwd(), './credentials.json');
 var S3Client = require('./lib/s3client.js');
-var s3 = new S3Client('./credentials.json');
+var s3 = new S3Client(credentials);
 var _root = process.cwd();
 var _moduleDir = module.filename.replace(/\/[^/]+$/, '/');
 
@@ -83,7 +85,7 @@ HtmlComponent.prototype.rename = function(currentName, replaceName, callback){
 };
 
 /** コンポーネントを使ったHTMLを書き出す */
-HtmlComponent.prototype.gulp_build = require('./lib/gulp-build.js');
+HtmlComponent.prototype.gulp_compile = require('./lib/gulp-compile.js');
 
 /** PSDファイルからHTMLファイルを生成する */
 HtmlComponent.prototype.generate = require('./lib/generate.js');
