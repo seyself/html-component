@@ -93,14 +93,17 @@ init = () ->
               _createComponents()
 
     _createDestDir = (dest, callback)->
-      exec 'mkdir -p ' + path.join(dest, 'js'), ()->
-        exec 'mkdir -p ' + path.join(dest, 'css'), ()->
-          exec 'mkdir -p ' + 'src/pages/js', ()->
-            exec 'mkdir -p ' + 'src/pages/css', ()->
-              exec 'mkdir -p ' + 'src/assets', ()->
-                exec 'mkdir -p ' + 'src/libs', ()->
-                  if callback
-                    callback()
+      dir = [
+        path.join(dest, 'js')
+        path.join(dest, 'css')
+        'src/pages/js'
+        'src/pages/css'
+        'src/assets'
+        'src/libs'
+      ].join(' ')
+      exec 'mkdir -p ' + dir, ()->
+        if callback
+          callback()
 
     _replaceJadeFormat = (jade)->
       jade = jade.replace(/([\r\n]+)\s+\|\s*[\r\n]+/g, '$1')
@@ -119,18 +122,29 @@ init = () ->
         else
           fs.writeFile(cssFile, css, {encoding:'utf8'}, null)
 
+    _getAssetFilePathList = (dest, filePathList) ->
+      filePathList.forEach (code)->
+        code = code.replace(/"/g, '')
+        src = path.dirname(code)
+        if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+          # not replace
+          # console.log code
+        else if dest.indexOf(src) < 0
+          dest.push(src)
+
     _copyHTMLAssets = (html, callback)->
       pathes = []
       matches = html.match(RE_ASSET_FILE)
       if matches
-        matches.forEach (code)->
-          code = code.replace(/"/g, '')
-          src = path.dirname(code)
-          if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
-            # not replace
-            # console.log code
-          else if pathes.indexOf(src) < 0
-            pathes.push(src)
+        _getAssetFilePathList(pathes, matches)
+        # matches.forEach (code)->
+        #   code = code.replace(/"/g, '')
+        #   src = path.dirname(code)
+        #   if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+        #     # not replace
+        #     # console.log code
+        #   else if pathes.indexOf(src) < 0
+        #     pathes.push(src)
 
       copyList = []
       for src in pathes
