@@ -364,10 +364,8 @@ init = () ->
       
       tag = _createElementTag(id, layers)
       className = option.name
-      if parentName
-        classPath = parentName + ' ' + className
-      else
-        classPath = className
+
+      classPath = _setClassPath(parentName, className)
 
       $$ = _cheerio.load(tag, {decodeEntities: false})
       $div = $$('div')
@@ -417,6 +415,15 @@ init = () ->
         $element.append $copm
       else
         $element.append $div
+
+    _setClassPath = (parentName, className)->
+      if parentName
+        classPath = parentName + ' ' + className
+        return classPath
+      else
+        classPath = className
+        return classPath
+
 
     _createComponentCSS = (id, classPath, indentLevel, node, layers, offsetX, offsetY)->
       data = layers[id]
