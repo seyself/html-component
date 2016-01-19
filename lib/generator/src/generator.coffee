@@ -386,15 +386,7 @@ init = () ->
       if doc.referers.indexOf(id) >= 0
         _ref_elements[id] = childContainer
 
-      if option.embed
-        childContainer.append(unescape(option.embed))
-      else if option.layer_name.match(/^@\d+/)
-        ref_id = option.layer_name.match(/^@(\d+)/)[1]
-        ref_node = _ref_elements[ref_id]
-        if ref_node
-          childContainer.append(ref_node.html())
-      else
-        _generateNodeList(node.children, classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
+      _setEmbed(option, childContainer, _ref_elements, node, classPath, indentLevel, doc, layers, $root, result, component)
 
       if _componentExportable && data.option.component
         cname = data.option.component
@@ -408,6 +400,17 @@ init = () ->
         $element.append $copm
       else
         $element.append $div
+
+    _setEmbed = (option, childContainer, _ref_elements, node, classPath, indentLevel, doc, layers, $root, result, component)->
+      if option.embed
+        childContainer.append(unescape(option.embed))
+      else if option.layer_name.match(/^@\d+/)
+        ref_id = option.layer_name.match(/^@(\d+)/)[1]
+        ref_node = _ref_elements[ref_id]
+        if ref_node
+          childContainer.append(ref_node.html())
+      else
+        _generateNodeList(node.children, classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
 
     _makeComponent = (data, result, indentLevel, id, node, layers, offsetX, offsetY)->
       component = data.option.component
