@@ -96,7 +96,10 @@ class jsx.StylusTemplate
     css += indent + 'font-size:' + meta.text.size.replace(/\s+/g, '') + '' + '\n'
     css += indent + 'color: #' + meta.text.color + '' + '\n'
     css += indent + 'text-align: ' + meta.text.align + '' + '\n'
-    css += indent + 'line-height: ' + meta.text.line_height?.replace(/\s+/g, '') + '' + '\n'
+    if typeof(meta.text.line_height) == 'number'
+      css += indent + 'line-height: ' + meta.text.line_height + '' + '\n'
+    else if typeof(meta.text.line_height) == 'string'
+      css += indent + 'line-height: ' + meta.text.line_height?.replace(/\s+/g, '') + '' + '\n'
     css += indent + 'letter-spacing: ' + (meta.text?.letter_spacing / 6000 * size) + 'px' + '\n'
     return css
 

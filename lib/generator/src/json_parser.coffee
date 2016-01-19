@@ -13,9 +13,9 @@ class jsx.LayoutJSONParser
   constructor: ()->
     
 
-  load: (layoutJson, optionJson, callback)->
+  load: (layoutJson, callback)->
     _layouts = require layoutJson
-    _options = require optionJson
+    _options = _layouts.options
 
     if _options.root.docs_url
       try
