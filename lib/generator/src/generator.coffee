@@ -45,38 +45,53 @@ init = () ->
       $body = $('div')
       $main = $('div#main')
 
-      if !dest
-        dest = '../app/build'
+      _params.dest = '../app/build'
 
       _components = []
       _ref_elements = {}
 
-      htmlFile = path.join(_params.dest_dir, _params.filename)
-      jadeFile = './src/pages/' + _params.filename.replace('.html', '.jade')
-      cssFile = path.join(_params.dest_dir, 'css')
-      cssFile = path.join(cssFile, path.basename(htmlFile).replace('.html', '.css'))
-      stylusFile = './src/pages/css/' + _params.filename.replace('.html', '.styl')
-      cssPath = path.relative path.dirname(htmlFile), cssFile
-      jsPath = cssPath.replace /[^\/]+\/([^.]+)\.css/, 'js/$1.js'
+      filePath = _createFilePath(_params)
 
       params = {}
-      style = _getBasicStyle(_data.document)
+      exportData = {}
+      exportData.style = _getBasicStyle(_data.document)
       _generateRelativeLayout(_data, $main, params)
-      style += params.css
+      exportData.style += params.css
 
       body = $body.html()
       body = '<div id="container">' + body + '</div>'
       if _componentExportable
-        body += htmlTemplate.scriptTags(jsPath)
+        body += htmlTemplate.scriptTags(filePath.jsPath)
 
-      html = _createHTML(doc.title, cssPath, body)
-      html = beautify.html(html)
+      exportData.html = _createHTML(doc.title, filePath.cssPath, body)
+      exportData.html = beautify.html(exportData.html)
 
-      _createDestDir dest, ()->
-        fs.writeFile(htmlFile, html, {encoding:'utf8'}, null)
-        _copyHTMLAssets html, ()->
+      _exportHTML(_params, filePath, exportData)
+
+    _exportHTML = (params, filePath, data)->
+      _createDestDir params.dest, ()->
+        fs.writeFile(filePath.htmlFile, data.html, {encoding:'utf8'}, null)
+        _copyHTMLAssets data.html, ()->
           # export jade
-          _exportJadeFile(_params, html, jadeFile, stylusFile, style, cssFile)
+          _exportJadeFile(params, data.html, filePath.jadeFile, filePath.stylusFile, data.style, filePath.cssFile)
+
+      # _exportHTML()
+    _createFilePath = (params)->
+      htmlFile = path.join(params.dest_dir, params.filename)
+      jadeFile = './src/pages/' + params.filename.replace('.html', '.jade')
+      cssFile = path.join(params.dest_dir, 'css')
+      cssFile = path.join(cssFile, path.basename(htmlFile).replace('.html', '.css'))
+      stylusFile = './src/pages/css/' + params.filename.replace('.html', '.styl')
+      cssPath = path.relative path.dirname(htmlFile), cssFile
+      jsPath = cssPath.replace /[^\/]+\/([^.]+)\.css/, 'js/$1.js'
+      return {
+        htmlFile: htmlFile
+        jadeFile: jadeFile
+        cssFile: cssFile
+        stylusFile: stylusFile
+        cssPath: cssPath
+        jsPath: jsPath
+      }
 
 
     _exportJadeFile = (_params, html, jadeFile, stylusFile, style, cssFile)->
@@ -87,7 +102,7 @@ init = () ->
             fs.writeFile(jadeFile, jade, {encoding:'utf8'}, null)
 
             _exportCssFile(stylusFile, style, cssFile)
-            
+
       else
         if _componentExportable
           _createComponents()
