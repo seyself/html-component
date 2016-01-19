@@ -377,14 +377,7 @@ init = () ->
       isComponentRoot = isRoot
       if _componentExportable && data.option.component
         isComponentRoot = true
-        component = data.option.component
-        className = component
-
-        result.css += _createComponentCSS(id, className, indentLevel, node, layers, offsetX, offsetY)
-        result = {
-          css: ''
-        }
-        indentLevel = 0
+        _makeComponent(data, result, indentLevel, id, node, layers, offsetX, offsetY)
 
       css = _createElementCSS(id, className, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)
 
@@ -415,6 +408,17 @@ init = () ->
         $element.append $copm
       else
         $element.append $div
+
+    _makeComponent = (data, result, indentLevel, id, node, layers, offsetX, offsetY)->
+      component = data.option.component
+      className = component
+
+      result.css += _createComponentCSS(id, className, indentLevel, node, layers, offsetX, offsetY)
+      result = {
+        css: ''
+      }
+      indentLevel = 0
+
 
     _setClassPath = (parentName, className)->
       if parentName
