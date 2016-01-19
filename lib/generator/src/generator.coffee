@@ -17,7 +17,7 @@ init = () ->
   htmlTemplate = new jsx.HtmlTemplate()
   stylusTemplate = new jsx.StylusTemplate()
 
-  _moduleDir = module.filename.replace(/\/[^/]+$/, '/')
+  _moduleDir = module.filename.replace(/\/[^\/]+$/, '/')
 
   class jsx.LayoutPreviewGenerator
     
