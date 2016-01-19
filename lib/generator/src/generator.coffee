@@ -503,17 +503,20 @@ init = () ->
       if node.prev_id
         prev = layers[node.prev_id]
         if prev
-          if prev.bounds.bottom <= data.bounds.top
-            data.top = data.bounds.top - prev.bounds.bottom
-            return true
-
-          if node.positionRelative
-            data.top = meta.position.absolute.y - prev.bounds.bottom
-            return true
+          return _compareNodeHeight(prev, data, node, meta)
 
       if !node.prev_id
         return true
       return false
+
+    _compareNodeHeight = (prev, data, node, meta)->
+      if prev.bounds.bottom <= data.bounds.top
+        data.top = data.bounds.top - prev.bounds.bottom
+        return true
+
+      if node.positionRelative
+        data.top = meta.position.absolute.y - prev.bounds.bottom
+        return true
 
 
     _getBasicStyle = (params)->
