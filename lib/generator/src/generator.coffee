@@ -123,28 +123,36 @@ init = () ->
           fs.writeFile(cssFile, css, {encoding:'utf8'}, null)
 
     _getAssetFilePathList = (dest, filePathList) ->
-      filePathList.forEach (code)->
-        code = code.replace(/"/g, '')
-        src = path.dirname(code)
-        if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+      filePathList.forEach (filePath)->
+        filePath = _deleteQuartFromURLText(filePath)
+        src = path.dirname(filePath)
+        if _isIgnoreAssetFilePath(filePath)
           # not replace
-          # console.log code
+          # console.log filePath
         else if dest.indexOf(src) < 0
           dest.push(src)
+
+    _isIgnoreAssetFilePath = (path) ->
+      if _isFullURL(path) 
+        return true
+      if _isComponentDebugJS(path)
+        return true
+      return false
+
+    _isFullURL = (url) ->
+      return url.match(/^https?:\/\//) != null
+
+    _isComponentDebugJS = (path) ->
+      return path.indexOf('html-component-debug.js') >= 0
+
+    _deleteQuartFromURLText = (text) ->
+      return text.replace(/"/g, '')
 
     _copyHTMLAssets = (html, callback)->
       pathes = []
       matches = html.match(RE_ASSET_FILE)
       if matches
         _getAssetFilePathList(pathes, matches)
-        # matches.forEach (code)->
-        #   code = code.replace(/"/g, '')
-        #   src = path.dirname(code)
-        #   if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
-        #     # not replace
-        #     # console.log code
-        #   else if pathes.indexOf(src) < 0
-        #     pathes.push(src)
 
       copyList = []
       for src in pathes
