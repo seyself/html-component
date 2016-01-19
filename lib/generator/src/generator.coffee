@@ -231,28 +231,34 @@ init = () ->
         assets: []
       dstBase = result.base
       matches = html.match(RE_ASSET_FILE)
-      console.log html
       matches?.forEach (code)->
-        code = code.replace(/"/g, '')
-        src = path.dirname(code)
-        if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
-          # not replace
-          # console.log code
-        else if pathes.indexOf(src) < 0
-          pathes.push(src)
+        _makeAssetPathList(code, pathes)
 
       for src in pathes
-        asset = path.join('component-assets', src.replace(_params.assets_src_path, ''))
-        srcDir = path.join(_params.assets_src, src.replace(_params.assets_src_path, ''))
-        dst = path.join(dstBase, asset)
-        dstDir = path.join(_params.cwd, path.dirname(dst))
-        result.html = result.html.split(src).join(asset)
-        result.assets.push {
-          mkdir: dst
-          cpSrc: srcDir
-          cpDst: dstDir
-        }
+        _setAssetPathList(src, result)
+
       return result
+
+    _setAssetPathList = (src, result) ->
+      asset = path.join('component-assets', src.replace(_params.assets_src_path, ''))
+      srcDir = path.join(_params.assets_src, src.replace(_params.assets_src_path, ''))
+      dst = path.join(dstBase, asset)
+      dstDir = path.join(_params.cwd, path.dirname(dst))
+      result.html = result.html.split(src).join(asset)
+      result.assets.push {
+        mkdir: dst
+        cpSrc: srcDir
+        cpDst: dstDir
+      }
+
+    _makeAssetPathList = (code, pathes) ->
+      code = code.replace(/"/g, '')
+      src = path.dirname(code)
+      if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+        # not replace
+        # console.log code
+      else if pathes.indexOf(src) < 0
+        pathes.push(src)
 
     _createComponentFiles = (data, params, callback)->
       dstDir = 'components/' + data.name + '/dist/'
