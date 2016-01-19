@@ -179,7 +179,7 @@ init = () ->
       if data
         packageJsonPath = 'components/' + data.name + '/package.json'
         isWritable = true
-        if fs.existsSync(packageJsonPath)
+        if _isComponent(packageJsonPath)
           packageJson = fs.readFileSync(packageJsonPath, {encoding:'utf8'})
           packageJson = JSON.parse(packageJson)
 
@@ -190,22 +190,29 @@ init = () ->
 
         console.log 'create component #' + data.name
 
-        html = data.node.html()
-        html = '<div class="pse ' + data.name + '">' + html + '</div>'
-        cssFile = data.name + '.css'
+        _setComponentFiles(data)
 
-        stylusTemplate.componentBaseCSS (baseCSS)->
-          html = _createHTML(data.name, cssFile, html, true, baseCSS)
-          html = beautify.html(html)
-          params = _replaceAssetPath(data, html)
-          _copyComponentAssets data, params, ()->
-            _createComponentFiles data, params, ()->
-              _createPackageJson(data)
-              _createComponents()
 
     _writePackageJsonTemplate = (_packageJsonTemplate) ->
       tmplPath = path.join(_moduleDir, '../../../template/package.json')
       _packageJsonTemplate = fs.readFileSync(tmplPath, {encoding:'utf8'})
+
+    _isComponent = (packageJsonPath) ->
+      return fs.existsSync(packageJsonPath)
+
+    _setComponentFiles = (data) ->
+      html = data.node.html()
+      html = '<div class="pse ' + data.name + '">' + html + '</div>'
+      cssFile = data.name + '.css'
+
+      stylusTemplate.componentBaseCSS (baseCSS)->
+        html = _createHTML(data.name, cssFile, html, true, baseCSS)
+        html = beautify.html(html)
+        params = _replaceAssetPath(data, html)
+        _copyComponentAssets data, params, ()->
+          _createComponentFiles data, params, ()->
+            _createPackageJson(data)
+            _createComponents()
 
 
 
@@ -224,6 +231,7 @@ init = () ->
         assets: []
       dstBase = result.base
       matches = html.match(RE_ASSET_FILE)
+      console.log html
       matches?.forEach (code)->
         code = code.replace(/"/g, '')
         src = path.dirname(code)
