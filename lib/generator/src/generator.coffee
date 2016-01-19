@@ -76,21 +76,30 @@ init = () ->
         fs.writeFile(htmlFile, html, {encoding:'utf8'}, null)
         _copyHTMLAssets html, ()->
           # export jade
-          if _params.export_jade
-            exec 'mkdir -p ' + './src/pages', ()->
-              html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
-                jade = _replaceJadeFormat(jade)
-                fs.writeFile(jadeFile, jade, {encoding:'utf8'}, null)
+          _exportJadeFile(_params, html, jadeFile, stylusFile, style, cssFile)
 
-                exec 'mkdir -p ' + './src/pages/css', ()->
-                  fs.writeFile(stylusFile, style, {encoding:'utf8'}, null)
-                  _generateCSS cssFile, style
 
-                if _componentExportable
-                  _createComponents()
-          else
-            if _componentExportable
-              _createComponents()
+    _exportJadeFile = (_params, html, jadeFile, stylusFile, style, cssFile)->
+      if _params.export_jade
+        exec 'mkdir -p ' + './src/pages', ()->
+          html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
+            jade = _replaceJadeFormat(jade)
+            fs.writeFile(jadeFile, jade, {encoding:'utf8'}, null)
+
+            _exportCssFile(stylusFile, style, cssFile)
+            
+      else
+        if _componentExportable
+          _createComponents()
+
+    _exportCssFile = (stylusFile, style, cssFile)->
+      exec 'mkdir -p ' + './src/pages/css', ()->
+        fs.writeFile(stylusFile, style, {encoding:'utf8'}, null)
+        _generateCSS cssFile, style
+
+      if _componentExportable
+        _createComponents()
+
 
     _createDestDir = (dest, callback)->
       dir = [
