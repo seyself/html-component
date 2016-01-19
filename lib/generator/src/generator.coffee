@@ -39,17 +39,17 @@ init = () ->
       
     generate: (params)->
       _params = params
-      _generateInit()
+      _generateInit(params)
       filePath = _createFilePath(params)
       exportData = {
         style: _createStyleSheet(_data)
         html: _createHTMLCode(_data.document, filePath)
       }
-      _exportHTML(_params, filePath, exportData)
+      _exportHTML(params, filePath, exportData)
 
-    _generateInit = ()->
+    _generateInit = (params)->
       $ = _cheerio.load('<div><div id="main" class="_' + _data.document.filename + '"></div></div>', {decodeEntities: false})
-      _params.dest = '../app/build'
+      params.dest = '../app/build'
       _components = []
       _ref_elements = {}
 
@@ -97,8 +97,8 @@ init = () ->
       }
 
 
-    _exportJadeFile = (_params, html, jadeFile, stylusFile, style, cssFile)->
-      if _params.export_jade
+    _exportJadeFile = (params, html, jadeFile, stylusFile, style, cssFile)->
+      if params.export_jade
         exec 'mkdir -p ' + './src/pages', ()->
           html2jade.convertHtml html, {donotencode:true}, (err, jade) ->
             jade = _replaceJadeFormat(jade)
