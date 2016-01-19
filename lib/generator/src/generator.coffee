@@ -39,34 +39,37 @@ init = () ->
       
     generate: (params)->
       _params = params
-      doc = _data.document
+      _generateInit()
+      filePath = _createFilePath(params)
+      exportData = {
+        style: _createStyleSheet(_data)
+        html: _createHTMLCode(_data.document, filePath)
+      }
+      _exportHTML(_params, filePath, exportData)
 
-      $ = _cheerio.load('<div><div id="main" class="_' + doc.filename + '"></div></div>', {decodeEntities: false})
-      $body = $('div')
-      $main = $('div#main')
-
+    _generateInit = ()->
+      $ = _cheerio.load('<div><div id="main" class="_' + _data.document.filename + '"></div></div>', {decodeEntities: false})
       _params.dest = '../app/build'
-
       _components = []
       _ref_elements = {}
 
-      filePath = _createFilePath(_params)
-
+    _createStyleSheet = (jsonData)->
+      $main = $('div#main')
       params = {}
-      exportData = {}
-      exportData.style = _getBasicStyle(_data.document)
-      _generateRelativeLayout(_data, $main, params)
-      exportData.style += params.css
+      styleCode = _getBasicStyle(jsonData.document)
+      _generateRelativeLayout(jsonData, $main, params)
+      styleCode += params.css
 
+    _createHTMLCode = (document, filePath)->
+      $body = $('div')
       body = $body.html()
       body = '<div id="container">' + body + '</div>'
       if _componentExportable
         body += htmlTemplate.scriptTags(filePath.jsPath)
 
-      exportData.html = _createHTML(doc.title, filePath.cssPath, body)
-      exportData.html = beautify.html(exportData.html)
-
-      _exportHTML(_params, filePath, exportData)
+      htmlCode = _createHTML(document.title, filePath.cssPath, body)
+      htmlCode = beautify.html(htmlCode)
+      return htmlCode
 
     _exportHTML = (params, filePath, data)->
       _createDestDir params.dest, ()->
