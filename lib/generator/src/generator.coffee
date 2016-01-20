@@ -297,14 +297,18 @@ init = () ->
         _generateCSS filePath.cssFile, filePath.style
 
         if _params.export_jade
-          exec 'mkdir -p ' + filePath.srcDir, ()->
-            html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
-              jade = _replaceJadeFormat(jade)
-              fs.writeFileSync(filePath.jadeFile, jade, {encoding:'utf8'})
-              fs.writeFileSync(filePath.stylFile, filePath.style, {encoding:'utf8'})
-              callback()
+          _createSrcFiles(filePath, params, callback)
         else
           callback()
+
+    _createSrcFiles = (filePath, params, callback)->
+      exec 'mkdir -p ' + filePath.srcDir, ()->
+        html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
+          jade = _replaceJadeFormat(jade)
+          fs.writeFileSync(filePath.jadeFile, jade, {encoding:'utf8'})
+          fs.writeFileSync(filePath.stylFile, filePath.style, {encoding:'utf8'})
+          callback()
+
 
     _createComponentFilePath = ()->
       dstDir = 'components/' + data.name + '/dist/'
