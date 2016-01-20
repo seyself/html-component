@@ -288,6 +288,22 @@ init = () ->
         pathes.push(src)
 
     _createComponentFiles = (data, params, callback)->
+      filePath = _createComponentFilePath(data)
+      exec 'mkdir -p ' + filePath.dstDir, ()->
+        fs.writeFileSync(filePath.htmlFile, params.html, {encoding:'utf8'})
+        _generateCSS filePath.cssFile, filePath.style
+
+        if _params.export_jade
+          exec 'mkdir -p ' + filePath.srcDir, ()->
+            html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
+              jade = _replaceJadeFormat(jade)
+              fs.writeFileSync(filePath.jadeFile, jade, {encoding:'utf8'})
+              fs.writeFileSync(filePath.stylFile, filePath.style, {encoding:'utf8'})
+              callback()
+        else
+          callback()
+
+    _createComponentFilePath = ()->
       dstDir = 'components/' + data.name + '/dist/'
       srcDir = 'components/' + data.name + '/src/'
       style = data.data.css
@@ -295,19 +311,16 @@ init = () ->
       cssFile = './' + dstDir + data.name + '.css'
       jadeFile = './' + srcDir + data.name + '.jade'
       stylFile = './' + srcDir + data.name + '.styl'
-      exec 'mkdir -p ' + dstDir, ()->
-        fs.writeFileSync(htmlFile, params.html, {encoding:'utf8'})
-        _generateCSS cssFile, style
+      return {
+        dstDir: dstDir
+        srcDir: srcDir
+        style: style
+        htmlFile: htmlFile
+        cssFile: cssFile
+        jadeFile: jadeFile
+        stylFile: stylFile
+      }
 
-        if _params.export_jade
-          exec 'mkdir -p ' + srcDir, ()->
-            html2jade.convertHtml params.html, {donotencode:true}, (err, jade) ->
-              jade = _replaceJadeFormat(jade)
-              fs.writeFileSync(jadeFile, jade, {encoding:'utf8'})
-              fs.writeFileSync(stylFile, style, {encoding:'utf8'})
-              callback()
-        else
-          callback()
 
 
     _copyComponentAssets = (data, params, callback)->
