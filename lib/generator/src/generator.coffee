@@ -412,49 +412,62 @@ init = () ->
       if config.option?.link_url
         childContainer = $$('a')
 
-      result = _createResultCSS(config, isRoot, result, indentLevel, node, layers, offsetX, offsetY)
+      argumentList = _makeArgumentList(config, result, indentLevel, node, layers)
+
+      result = _createResultCSS(argumentList, isRoot, offsetX, offsetY)
 
       if doc.referers.indexOf(config.id) >= 0
         _ref_elements[config.id] = childContainer
 
-      _appendNodeOption(config.option, childContainer, node, config.classPath, indentLevel, doc, layers, $root, result, component)
-      _appendComponentElement(config.data, _cheerio, _components, $element, $div)
+      _appendNodeOption(argumentList, childContainer, doc, $root, component)
+      _appendComponentElement(argumentList, _cheerio, _components, $element, $div)
 
-    _appendNodeOption = (option, childContainer, node, classPath, indent, doc, layers, $root, result, component)->
+    _makeArgumentList = (config, result, indentLevel, node, layers)->
+      return {
+        config: config
+        result: result
+        indentLevel: indentLevel
+        node: node
+        layers: layers 
+      }
+
+
+    _appendNodeOption = (list, childContainer, doc, $root, component)->
+      option = list.config.option
       if option.embed
         childContainer.append(unescape(option.embed))
       else if _layerNameIsLink(option.layer_name)
         _appendReferenceNode(childContainer, _ref_elements, option.layer_name)
       else
-        _generateNodeList(node.children, classPath, indent + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
+        _generateNodeList(list.node.children, list.config.classPath, list.indentLevel + 1, doc, list.layers, $root, childContainer, list.result, 0, 0, component, false)
 
-    _appendComponentElement = (data, _cheerio, _components, $element, $div)->
-      if _componentExportable && data.option.component
-        _appendComponent(_cheerio, _components, data.option.component)
+    _appendComponentElement = (list, _cheerio, _components, $element, $div)->
+      if _componentExportable && list.config.data.option.component
+        _appendComponent(list.config.id, _cheerio, _components, list.congfig.data.option.component, $div, list.result, $element)
       else
         $element.append $div
 
-    _createResultCSS = (config, isComponentRoot, result, indent, node, layers, offsetX, offsetY)->
-      if _componentExportable && config.data.option.component
+    _createResultCSS = (list, isComponentRoot, offsetX, offsetY)->
+      if _componentExportable && list.config.data.option.component
         isComponentRoot = true
-        component = config.data.option.component
-        config.className = component
+        component = list.config.data.option.component
+        list.config.className = component
 
-        result.css += _createComponentCSS(config.id, config.className, indent, node, layers, offsetX, offsetY)
-        result = {
+        list.result.css += _createComponentCSS(list.config.id, list.config.className, list.indentLevel, list.node, list.layers, offsetX, offsetY)
+        list.result = {
           css: ''
         }
-        indent = 0
+        list.indentLevel = 0
 
-      css = _createElementCSS(config.id, config.className, indent, node, layers, offsetX, offsetY, component, isComponentRoot)
-      result.css += css + '\n'
+      css = _createElementCSS(list.config.id, list.config.className, list.indentLevel, list.node, list.layers, offsetX, offsetY, component, isComponentRoot)
+      list.result.css += css + '\n'
 
-      return result
+      return list.result
 
 
-    _appendComponent = (cheerio, componentList, componentName)->
+    _appendComponent = (id, cheerio, componentList, componentName, $div, result, $element)->
       componentList.push {
-        id: config.id
+        id: id
         name: componentName
         node: $div
         data: result
