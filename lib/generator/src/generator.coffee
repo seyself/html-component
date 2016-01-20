@@ -400,55 +400,74 @@ init = () ->
 
     _generateNode = (node, parentName, indentLevel, doc, layers, $root, $element, result, offsetX, offsetY, component, isRoot)->
       config = _setConfig(node, layers, parentName)
-
       tag = _createElementTag(config.id, layers)
       $$ = _cheerio.load(tag, {decodeEntities: false})
       $div = $$('div')
-
       childContainer = $div
+      
       if config.option?.link_url
         childContainer = $$('a')
 
-      isComponentRoot = isRoot
+      result = _createResultCSS(config, isRoot, result, indentLevel, node, layers, offsetX, offsetY)
+
+      if doc.referers.indexOf(config.id) >= 0
+        _ref_elements[config.id] = childContainer
+
+      _appendNodeOption(config.option, childContainer, node, config.classPath, indentLevel, doc, layers, $root, result, component)
+      _appendComponentElement(config.data, _cheerio, _components, $element, $div)
+
+    _appendNodeOption = (option, childContainer, node, classPath, indent, doc, layers, $root, result, component)->
+      if option.embed
+        childContainer.append(unescape(option.embed))
+      else if _layerNameIsLink(option.layer_name)
+        _appendReferenceNode(childContainer, _ref_elements, option.layer_name)
+      else
+        _generateNodeList(node.children, classPath, indent + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
+
+    _appendComponentElement = (data, _cheerio, _components, $element, $div)->
+      if _componentExportable && data.option.component
+        _appendComponent(_cheerio, _components, data.option.component)
+      else
+        $element.append $div
+
+    _createResultCSS = (config, isComponentRoot, result, indent, node, layers, offsetX, offsetY)->
       if _componentExportable && config.data.option.component
         isComponentRoot = true
         component = config.data.option.component
         config.className = component
 
-        result.css += _createComponentCSS(config.id, config.className, indentLevel, node, layers, offsetX, offsetY)
+        result.css += _createComponentCSS(config.id, config.className, indent, node, layers, offsetX, offsetY)
         result = {
           css: ''
         }
-        indentLevel = 0
+        indent = 0
 
-      css = _createElementCSS(config.id, config.className, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)
+      css = _createElementCSS(config.id, config.className, indent, node, layers, offsetX, offsetY, component, isComponentRoot)
       result.css += css + '\n'
 
-      if doc.referers.indexOf(config.id) >= 0
-        _ref_elements[config.id] = childContainer
+      return result
 
-      if config.option.embed
-        childContainer.append(unescape(config.option.embed))
-      else if config.option.layer_name.match(/^@\d+/)
-        ref_id = config.option.layer_name.match(/^@(\d+)/)[1]
-        ref_node = _ref_elements[ref_id]
-        if ref_node
-          childContainer.append(ref_node.html())
-      else
-        _generateNodeList(node.children, config.classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
 
-      if _componentExportable && config.data.option.component
-        cname = config.data.option.component
-        _components.push {
-          id: config.id
-          name: cname
-          node: $div
-          data: result
-        }
-        $copm = _cheerio.load('<' + cname + '></' + cname + '>', {decodeEntities: false})(cname)
-        $element.append $copm
-      else
-        $element.append $div
+    _appendComponent = (cheerio, componentList, componentName)->
+      componentList.push {
+        id: config.id
+        name: componentName
+        node: $div
+        data: result
+      }
+      $component = cheerio.load('<' + componentName + '></' + componentName + '>', {decodeEntities: false})(componentName)
+      $element.append $component
+
+
+    _layerNameIsLink = (layerName)->
+      return layerName.match(/^@\d+/) != null
+
+    _appendReferenceNode = (container, elements, layerName)->
+      ref_id = layerName.match(/^@(\d+)/)[1]
+      ref_node = elements[ref_id]
+      if ref_node
+        container.append(ref_node.html())
+
 
     _setConfig = (node, layers, parentName)->
       id = node.id
@@ -463,8 +482,6 @@ init = () ->
         className: className
         classPath: classPath
       }
-
-      
 
     _setClassPath = (parentName, className)->
       if parentName
