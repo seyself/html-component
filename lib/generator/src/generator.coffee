@@ -404,7 +404,7 @@ init = () ->
       $$ = _cheerio.load(tag, {decodeEntities: false})
       $div = $$('div')
       childContainer = $div
-      
+
       if config.option?.link_url
         childContainer = $$('a')
 
@@ -520,21 +520,12 @@ init = () ->
       meta = data.meta
       _indent = _getIndent(indentLevel, INDENT_STR)
       css = ''
-      if _indent
-        css += _indent + '& > .' + classPath + '\n'
-      else
-        css += _indent + '.' + classPath + '\n'
 
+      css = _appendCSSElementIndent(_indent, css, classPath)
       _indent += INDENT_STR
-
-      if meta.text
-        css += _createTextElementCSS(meta, _indent)
-
-      data.top = meta.position.relative.y + offsetY
-      data.left = meta.position.relative.x + offsetX
-
-      if data.background && data.background.image
-        css += stylusTemplate.background(data, _indent, _params.assets_src_path)
+      css = _createTextElementCSS(meta, _indent, css)
+      _setDataPosition(data, meta, offsetX, offsetY)
+      css = _setDataBackground(data, css, _indent)
 
       isRelative = _isPositionRelative(data, meta, node, layers)
       parent = layers[data.parent_id]
@@ -546,6 +537,27 @@ init = () ->
 
       return css
 
+    _setDataPosition = (data, meta, offsetX, offsetY)->
+      data.top = meta.position.relative.y + offsetY
+      data.left = meta.position.relative.x + offsetX
+
+    _setDataBackground = (data, css, _indent)->
+      if data.background && data.background.image
+        css += stylusTemplate.background(data, _indent, _params.assets_src_path)
+        return css
+      else 
+        return css
+
+
+    _appendCSSElementIndent = (_indent, css, classPath)->
+      if _indent
+        css += _indent + '& > .' + classPath + '\n'
+      else
+        css += _indent + '.' + classPath + '\n'
+
+      return css
+
+
 
     _getIndent = (level, str)->
       unless str
@@ -556,8 +568,12 @@ init = () ->
         code += str
       return code
 
-    _createTextElementCSS = (meta, indent)->
-      return stylusTemplate.textElement meta, indent
+    _createTextElementCSS = (meta, indent, css)->
+      if meta.text
+        css += stylusTemplate.textElement meta, indent
+        return css
+      else
+        return css
 
     _isPositionRelative = (data, meta, node, layers)->
   #    if data.meta.name == 'title'
