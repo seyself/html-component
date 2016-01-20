@@ -181,6 +181,11 @@ init = () ->
       if matches
         _getAssetFilePathList(pathes, matches)
 
+      copyList = _createCopyList(pathes)
+
+      _copyComponentAssets(null, {assets:copyList}, callback)
+
+    _createCopyList = (pathes)->
       copyList = []
       for src in pathes
         src_diff_1 = path.join(_params.cwd, src.replace(_params.assets_src_path, _params.assets_dest))
@@ -192,10 +197,7 @@ init = () ->
           cpSrc: srcDir
           cpDst: dstDir
         }
-
-      _copyComponentAssets(null, {assets:copyList}, callback)
-
-
+      return copyList
 
     _createComponents = ()->
       if !_packageJsonTemplate
@@ -240,8 +242,6 @@ init = () ->
           _createComponentFiles data, params, ()->
             _createPackageJson(data)
             _createComponents()
-
-
 
     _createPackageJson = (data)->
       filePath = 'components/' + data.name + '/package.json'
