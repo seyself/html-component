@@ -399,52 +399,48 @@ init = () ->
       return tag
 
     _generateNode = (node, parentName, indentLevel, doc, layers, $root, $element, result, offsetX, offsetY, component, isRoot)->
-      id = node.id
-      data = layers[id]
-      option = data.option
-      tag = _createElementTag(id, layers)
-      className = option.name
-      classPath = _setClassPath(parentName, className)
+      config = _setConfig(node, layers, parentName)
 
+      tag = _createElementTag(config.id, layers)
       $$ = _cheerio.load(tag, {decodeEntities: false})
       $div = $$('div')
 
       childContainer = $div
-      if option?.link_url
+      if config.option?.link_url
         childContainer = $$('a')
 
       isComponentRoot = isRoot
-      if _componentExportable && data.option.component
+      if _componentExportable && config.data.option.component
         isComponentRoot = true
-        component = data.option.component
-        className = component
+        component = config.data.option.component
+        config.className = component
 
-        result.css += _createComponentCSS(id, className, indentLevel, node, layers, offsetX, offsetY)
+        result.css += _createComponentCSS(config.id, config.className, indentLevel, node, layers, offsetX, offsetY)
         result = {
           css: ''
         }
         indentLevel = 0
 
-      css = _createElementCSS(id, className, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)
+      css = _createElementCSS(config.id, config.className, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)
       result.css += css + '\n'
 
-      if doc.referers.indexOf(id) >= 0
-        _ref_elements[id] = childContainer
+      if doc.referers.indexOf(config.id) >= 0
+        _ref_elements[config.id] = childContainer
 
-      if option.embed
-        childContainer.append(unescape(option.embed))
-      else if option.layer_name.match(/^@\d+/)
-        ref_id = option.layer_name.match(/^@(\d+)/)[1]
+      if config.option.embed
+        childContainer.append(unescape(config.option.embed))
+      else if config.option.layer_name.match(/^@\d+/)
+        ref_id = config.option.layer_name.match(/^@(\d+)/)[1]
         ref_node = _ref_elements[ref_id]
         if ref_node
           childContainer.append(ref_node.html())
       else
-        _generateNodeList(node.children, classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
+        _generateNodeList(node.children, config.classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
 
-      if _componentExportable && data.option.component
-        cname = data.option.component
+      if _componentExportable && config.data.option.component
+        cname = config.data.option.component
         _components.push {
-          id: id
+          id: config.id
           name: cname
           node: $div
           data: result
@@ -453,6 +449,21 @@ init = () ->
         $element.append $copm
       else
         $element.append $div
+
+    _setConfig = (node, layers, parentName)->
+      id = node.id
+      data = layers[id]
+      option = data.option
+      className = option.name
+      classPath = _setClassPath(parentName, className)
+      return {
+        id: id
+        data: data
+        option: option
+        className: className
+        classPath: classPath
+      }
+
       
 
     _setClassPath = (parentName, className)->
