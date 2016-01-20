@@ -259,10 +259,10 @@ init = () ->
       dstBase = result.base
       matches = html.match(RE_ASSET_FILE)
       matches?.forEach (code)->
-        _makeAssetPathList(code, pathes)
+        pathes = _makeAssetPathList(code, pathes)
 
       for src in pathes
-        _setAssetPathList(src, result)
+        result = _setAssetPathList(src, result)
 
       return result
 
@@ -277,6 +277,7 @@ init = () ->
         cpSrc: srcDir
         cpDst: dstDir
       }
+      return result
 
     _makeAssetPathList = (code, pathes) ->
       code = code.replace(/"/g, '')
@@ -284,8 +285,10 @@ init = () ->
       if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
         # not replace
         # console.log code
+        return pathes
       else if pathes.indexOf(src) < 0
         pathes.push(src)
+        return pathes
 
     _createComponentFiles = (data, params, callback)->
       filePath = _createComponentFilePath(data)
@@ -399,12 +402,8 @@ init = () ->
       id = node.id
       data = layers[id]
       option = data.option
-
-      meta = data.meta
-      
       tag = _createElementTag(id, layers)
       className = option.name
-
       classPath = _setClassPath(parentName, className)
 
       $$ = _cheerio.load(tag, {decodeEntities: false})
@@ -417,16 +416,30 @@ init = () ->
       isComponentRoot = isRoot
       if _componentExportable && data.option.component
         isComponentRoot = true
-        _makeComponent(data, result, indentLevel, id, node, layers, offsetX, offsetY)
+        component = data.option.component
+        className = component
+
+        result.css += _createComponentCSS(id, className, indentLevel, node, layers, offsetX, offsetY)
+        result = {
+          css: ''
+        }
+        indentLevel = 0
 
       css = _createElementCSS(id, className, indentLevel, node, layers, offsetX, offsetY, component, isComponentRoot)
-
       result.css += css + '\n'
 
       if doc.referers.indexOf(id) >= 0
         _ref_elements[id] = childContainer
 
-      _setEmbed(option, childContainer, _ref_elements, node, classPath, indentLevel, doc, layers, $root, result, component)
+      if option.embed
+        childContainer.append(unescape(option.embed))
+      else if option.layer_name.match(/^@\d+/)
+        ref_id = option.layer_name.match(/^@(\d+)/)[1]
+        ref_node = _ref_elements[ref_id]
+        if ref_node
+          childContainer.append(ref_node.html())
+      else
+        _generateNodeList(node.children, classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
 
       if _componentExportable && data.option.component
         cname = data.option.component
@@ -440,28 +453,7 @@ init = () ->
         $element.append $copm
       else
         $element.append $div
-
-    _setEmbed = (option, childContainer, _ref_elements, node, classPath, indentLevel, doc, layers, $root, result, component)->
-      if option.embed
-        childContainer.append(unescape(option.embed))
-      else if option.layer_name.match(/^@\d+/)
-        ref_id = option.layer_name.match(/^@(\d+)/)[1]
-        ref_node = _ref_elements[ref_id]
-        if ref_node
-          childContainer.append(ref_node.html())
-      else
-        _generateNodeList(node.children, classPath, indentLevel + 1, doc, layers, $root, childContainer, result, 0, 0, component, false)
-
-    _makeComponent = (data, result, indentLevel, id, node, layers, offsetX, offsetY)->
-      component = data.option.component
-      className = component
-
-      result.css += _createComponentCSS(id, className, indentLevel, node, layers, offsetX, offsetY)
-      result = {
-        css: ''
-      }
-      indentLevel = 0
-
+      
 
     _setClassPath = (parentName, className)->
       if parentName
