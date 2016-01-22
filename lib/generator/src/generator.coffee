@@ -210,12 +210,13 @@ init = () ->
         isWritable = true
         if _isComponent(packageJsonPath)
           packageJson = fs.readFileSync(packageJsonPath, {encoding:'utf8'})
-          packageJson = JSON.parse(packageJson)
+          if packageJson
+            packageJson = JSON.parse(packageJson)
 
-          # package.jsonのversionが'0.0.0'以外の時はコンポーネントは作らない
-          if packageJson.version != '0.0.0'
-            _createComponents()
-            return
+            # package.jsonのversionが'0.0.0'以外の時はコンポーネントは作らない
+            if packageJson.version != '0.0.0'
+              _createComponents()
+              return
 
         console.log 'create component #' + data.name
 
