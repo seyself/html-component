@@ -262,11 +262,11 @@ init = () ->
         pathes = _makeAssetPathList(code, pathes)
 
       for src in pathes
-        result = _setAssetPathList(params, src, result)
+        result = _setAssetPathList(dstBase, params, src, result)
 
       return result
 
-    _setAssetPathList = (params, src, result) ->
+    _setAssetPathList = (dstBase, params, src, result) ->
       asset = path.join('component-assets', src.replace(params.assets_src_path, ''))
       srcDir = path.join(params.assets_src, src.replace(params.assets_src_path, ''))
       dst = path.join(dstBase, asset)
@@ -310,7 +310,7 @@ init = () ->
           callback()
 
 
-    _createComponentFilePath = ()->
+    _createComponentFilePath = (data)->
       dstDir = 'components/' + data.name + '/dist/'
       srcDir = 'components/' + data.name + '/src/'
       style = data.data.css
