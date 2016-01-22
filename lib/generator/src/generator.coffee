@@ -260,7 +260,14 @@ init = () ->
       dstBase = result.base
       matches = html.match(RE_ASSET_FILE)
       matches?.forEach (code)->
-        pathes = _makeAssetPathList(code, pathes)
+        code = code.replace(/"/g, '')
+        src = path.dirname(code)
+        if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
+          # not replace
+          # console.log code
+          return pathes
+        else if pathes.indexOf(src) < 0
+          pathes.push(src)
 
       for src in pathes
         result = _setAssetPathList(dstBase, src, result)
@@ -279,17 +286,6 @@ init = () ->
         cpDst: dstDir
       }
       return result
-
-    _makeAssetPathList = (code, pathes) ->
-      code = code.replace(/"/g, '')
-      src = path.dirname(code)
-      if code.match(/^https?:\/\//) || code.indexOf('html-component-debug.js') >= 0
-        # not replace
-        # console.log code
-        return pathes
-      else if pathes.indexOf(src) < 0
-        pathes.push(src)
-        return pathes
 
     _createComponentFiles = (data, params, callback)->
       filePath = _createComponentFilePath(data)
