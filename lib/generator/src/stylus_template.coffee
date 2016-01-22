@@ -1,6 +1,8 @@
 jsx = jsx || {}
 
 path = require 'path'
+stylus = require 'stylus'
+nib = require 'nib'
 
 class jsx.StylusTemplate
 
