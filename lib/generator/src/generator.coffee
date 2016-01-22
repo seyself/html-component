@@ -443,7 +443,7 @@ init = () ->
 
     _appendComponentElement = (list, _cheerio, _components, $element, $div)->
       if _componentExportable && list.config.data.option.component
-        _appendComponent(list.config.id, _cheerio, _components, list.congfig.data.option.component, $div, list.result, $element)
+        _appendComponent(list.config.id, _cheerio, _components, list.config.data.option.component, $div, list.result, $element)
       else
         $element.append $div
 
