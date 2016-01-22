@@ -74,7 +74,7 @@ init = () ->
     _exportHTML = (params, filePath, data)->
       _createDestDir params.dest, ()->
         fs.writeFile(filePath.htmlFile, data.html, {encoding:'utf8'}, null)
-        _copyHTMLAssets params,data.html, ()->
+        _copyHTMLAssets data.html, ()->
           # export jade
           _exportJadeFile(params, data.html, filePath.jadeFile, filePath.stylusFile, data.style, filePath.cssFile)
 
@@ -104,19 +104,19 @@ init = () ->
             jade = _replaceJadeFormat(jade)
             fs.writeFile(jadeFile, jade, {encoding:'utf8'}, null)
 
-            _exportCssFile(params, stylusFile, style, cssFile)
+            _exportCssFile( stylusFile, style, cssFile)
 
       else
         if _componentExportable
-          _createComponents(params)
+          _createComponents()
 
-    _exportCssFile = (params, stylusFile, style, cssFile)->
+    _exportCssFile = (stylusFile, style, cssFile)->
       exec 'mkdir -p ' + './src/pages/css', ()->
         fs.writeFile(stylusFile, style, {encoding:'utf8'}, null)
         _generateCSS cssFile, style
 
       if _componentExportable
-        _createComponents(params)
+        _createComponents()
 
 
     _createDestDir = (dest, callback)->
@@ -175,22 +175,22 @@ init = () ->
     _deleteQuartFromURLText = (text) ->
       return text.replace(/"/g, '')
 
-    _copyHTMLAssets = (params, html, callback)->
+    _copyHTMLAssets = (html, callback)->
       pathes = []
       matches = html.match(RE_ASSET_FILE)
       if matches
         _getAssetFilePathList(pathes, matches)
 
-      copyList = _createCopyList(params, pathes)
+      copyList = _createCopyList(pathes)
 
       _copyComponentAssets(null, {assets:copyList}, callback)
 
-    _createCopyList = (params, pathes)->
+    _createCopyList = (pathes)->
       copyList = []
       for src in pathes
-        src_diff_1 = path.join(params.cwd, src.replace(params.assets_src_path, params.assets_dest))
-        src_diff_2 = path.join(params.cwd, params.assets_dest)
-        srcDir = path.join(params.assets_src, src_diff_1.replace(src_diff_2, ''))
+        src_diff_1 = path.join(_params.cwd, src.replace(_params.assets_src_path, _params.assets_dest))
+        src_diff_2 = path.join(_params.cwd, _params.assets_dest)
+        srcDir = path.join(_params.assets_src, src_diff_1.replace(src_diff_2, ''))
         dstDir = path.dirname(src_diff_1)
         copyList.push {
           mkdir: dstDir
@@ -199,7 +199,7 @@ init = () ->
         }
       return copyList
 
-    _createComponents = (params)->
+    _createComponents = ()->
       if !_packageJsonTemplate
         _writePackageJsonTemplate(_packageJsonTemplate)
 
@@ -214,12 +214,12 @@ init = () ->
 
           # package.jsonのversionが'0.0.0'以外の時はコンポーネントは作らない
           if packageJson.version != '0.0.0'
-            _createComponents(params)
+            _createComponents()
             return
 
         console.log 'create component #' + data.name
 
-        _setComponentFiles(params, data)
+        _setComponentFiles(data)
 
 
     _writePackageJsonTemplate = (_packageJsonTemplate) ->
@@ -229,7 +229,7 @@ init = () ->
     _isComponent = (packageJsonPath) ->
       return fs.existsSync(packageJsonPath)
 
-    _setComponentFiles = (params, data) ->
+    _setComponentFiles = (data) ->
       html = data.node.html()
       html = '<div class="pse ' + data.name + '">' + html + '</div>'
       cssFile = data.name + '.css'
@@ -237,20 +237,20 @@ init = () ->
       stylusTemplate.componentBaseCSS (baseCSS)->
         html = _createHTML(data.name, cssFile, html, true, baseCSS)
         html = beautify.html(html)
-        params = _replaceAssetPath(params, data, html)
+        params = _replaceAssetPath(data, html)
         _copyComponentAssets data, params, ()->
           _createComponentFiles data, params, ()->
-            _createPackageJson(params, data)
-            _createComponents(params)
+            _createPackageJson(data)
+            _createComponents()
 
-    _createPackageJson = (params, data)->
+    _createPackageJson = (data)->
       filePath = 'components/' + data.name + '/package.json'
-      filePath = path.join(params.cwd, filePath)
+      filePath = path.join(_params.cwd, filePath)
       json = _packageJsonTemplate.split('${name}').join(data.name)
       fs.writeFileSync(filePath, json, {encoding:'utf8'})
 
 
-    _replaceAssetPath = (params, data, html)->
+    _replaceAssetPath = (data, html)->
       pathes = []
       result = 
         html: html
@@ -262,15 +262,15 @@ init = () ->
         pathes = _makeAssetPathList(code, pathes)
 
       for src in pathes
-        result = _setAssetPathList(dstBase, params, src, result)
+        result = _setAssetPathList(dstBase, src, result)
 
       return result
 
-    _setAssetPathList = (dstBase, params, src, result) ->
-      asset = path.join('component-assets', src.replace(params.assets_src_path, ''))
-      srcDir = path.join(params.assets_src, src.replace(params.assets_src_path, ''))
+    _setAssetPathList = (dstBase, src, result) ->
+      asset = path.join('component-assets', src.replace(_params.assets_src_path, ''))
+      srcDir = path.join(_params.assets_src, src.replace(_params.assets_src_path, ''))
       dst = path.join(dstBase, asset)
-      dstDir = path.join(params.cwd, path.dirname(dst))
+      dstDir = path.join(_params.cwd, path.dirname(dst))
       result.html = result.html.split(src).join(asset)
       result.assets.push {
         mkdir: dst
@@ -296,7 +296,7 @@ init = () ->
         fs.writeFileSync(filePath.htmlFile, params.html, {encoding:'utf8'})
         _generateCSS filePath.cssFile, filePath.style
 
-        if params.export_jade
+        if _params.export_jade
           _createSrcFiles(filePath, params, callback)
         else
           callback()
