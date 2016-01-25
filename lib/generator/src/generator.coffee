@@ -201,7 +201,7 @@ init = () ->
 
     _createComponents = ()->
       if !_packageJsonTemplate
-        _writePackageJsonTemplate(_packageJsonTemplate)
+        _writePackageJsonTemplate()
 
       data = _components.shift()
 
@@ -223,7 +223,7 @@ init = () ->
         _setComponentFiles(data)
 
 
-    _writePackageJsonTemplate = (_packageJsonTemplate) ->
+    _writePackageJsonTemplate = () ->
       tmplPath = path.join(_moduleDir, '../../../template/package.json')
       _packageJsonTemplate = fs.readFileSync(tmplPath, {encoding:'utf8'})
 
