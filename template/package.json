@@ -14,7 +14,7 @@
     "gulp-jade": "latest",
     "gulp-plumber": "latest",
     "gulp-stylus": "latest",
-    "gulp-watch": "^4.3.5",
+    "gulp-watch": "latest",
     "jade": "latest"
   }
 }

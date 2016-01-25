@@ -242,7 +242,15 @@ init = () ->
         _copyComponentAssets data, params, ()->
           _createComponentFiles data, params, ()->
             _createPackageJson(data)
+            _createGulpFile(data)
             _createComponents()
+
+    _createGulpFile = (data)->
+      gulpFilePath = 'components/' + data.name
+      gulpFilePath = path.join(_params.cwd, gulpFilePath)
+      tmplGulpPath = path.join(_moduleDir, '../../../template/gulpfile.js')
+      exec 'cp ' + tmplGulpPath + ' ' + gulpFilePath, ()->
+        console.log '-------- create gulp'
 
     _createPackageJson = (data)->
       filePath = 'components/' + data.name + '/package.json'
