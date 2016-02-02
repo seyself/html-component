@@ -1,8 +1,9 @@
 const path = require('path');
-const dest = './dist';
-const src = './src';
+const dest = './lib/generator/dist';
+const src = './lib/generator/src';
 const relativeSrcPath = path.relative('.', src);
 
+require( 'babel-register' );
 const gulp = require('gulp');
 const gulpif = require('gulp-if');
 const uglify = require('gulp-uglify');
@@ -13,7 +14,7 @@ const config = {
   dest: dest,
 
   js: {
-    src: src + '/js/**/*',
+    src: src + '/**/*',
     dest: dest + '',
     uglify: false
   },
@@ -31,9 +32,11 @@ const config = {
         {
           test: /\.js$/,
           loader: 'babel-loader',
-          exclude: "/Users/newton/project/htmlGenerator/html-generate/server/generator/node_modules/html-component/lib/generator/node_modules",
+          exclude: /node_modules/,
           query: {
-            presets: ['es2015']
+            presets: ['es2015'],
+            optional: ['runtime'],
+            stage: 0
           }
         }
       ]
