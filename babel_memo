@@ -1,4 +1,4 @@
 
-babel lib/generator/src --out-file lib/generator/dist/generator.js
+babel lib/generator/src --out-file lib/generator/dist
 
-babel lib/generator/src --watch --out-file lib/generator/dist/generator.js
+babel lib/generator/src --watch --out-file lib/generator/dist
