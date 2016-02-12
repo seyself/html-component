@@ -2,7 +2,7 @@
 
 var path = require('path');
 var fs = require('fs');
-var exec = require('exec');
+var exec = require('child_process').exec;
 var credentials = path.join(process.cwd(), './credentials.json');
 var S3Client = require('./lib/s3client.js');
 var s3 = new S3Client(credentials);
