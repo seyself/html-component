@@ -176,6 +176,15 @@ function _createComponents(){
   }
 }
 
+function _copyComponentsCheckFiles(){
+  var componentsPath = path.join(_moduleDir, '../../../../../components');
+  var componentsSrcPath = path.join(_moduleDir, '../../../components');
+  exec('cp -r ' + componentsSrcPath + '/libs ' + componentsPath, function(){
+    exec('cp -r ' + componentsSrcPath + '/html-component ' + componentsPath, function(){
+    });      
+  });
+}
+
 function _deleteQuartFromURLText(text){
   return text.replace(/"/g, '');
 }
@@ -226,6 +235,7 @@ function _setComponentFiles(data){
         _createPackageJson(data);
         _createGulpFile(data);
         _createComponents();
+        _copyComponentsCheckFiles();
       });
     });
   });
