@@ -179,10 +179,18 @@ function _createComponents(){
 function _copyComponentsCheckFiles(){
   var componentsPath = path.join(_moduleDir, '../../../../../components');
   var componentsSrcPath = path.join(_moduleDir, '../../../components');
-  exec('cp -r ' + componentsSrcPath + '/libs ' + componentsPath, function(){
+  if(!isComponentCheckFiles(path.join(componentsPath, '/libs'))){
+    exec('cp -r ' + componentsSrcPath + '/libs ' + componentsPath, function(){
+    });    
+  }
+  if(!isComponentCheckFiles(path.join(componentsPath, '/html-component'))){
     exec('cp -r ' + componentsSrcPath + '/html-component ' + componentsPath, function(){
-    });      
-  });
+    });
+  }
+}
+
+function isComponentCheckFiles(path){
+  return fs.existsSync(path);
 }
 
 function _deleteQuartFromURLText(text){
